@@ -80,13 +80,22 @@ HM.registerTheme({
   id: "dragon",            // unique id
   name: "Dragon",          // shown in the picker
   accent: "#c9a0ff",       // tints the board, keys and buttons
-  render(stage, outcome) { // SVG markup for a 240×220 picture
-    // stage 0..6 (6 = out of guesses); outcome is null, "win" or "lose"
-    return `<circle class="c" cx="120" cy="110" r="${20 + stage * 10}"/>`;
+  optional: [2, 5],        // the 2 of its 8 stages that are small optional details
+  render(view, outcome) {  // SVG markup for a 240×220 picture
+    // view.has(n): stage n (1..8) has happened; view.last: the stage this miss added;
+    // view.core: non-optional stages so far (0..6). outcome is null, "win" or "lose".
+    return `<circle class="c" cx="120" cy="110" r="${20 + view.core * 10}"/>`;
   },
   css: `/* optional keyframes; prefix class names with the theme id */`
 });
 ```
+
+Every theme has 8 stages, and each wrong guess adds exactly one:
+
+- **Easy** allows 8 wrong guesses and uses all 8 stages.
+- **Medium, Hard, Impossible and multiplayer** allow 6 wrong guesses and skip the theme's 2 `optional` stages. Those skipped details are never drawn in those games.
+
+Either way, the last allowed miss lands on the final stage, and the picture starts with nothing added.
 
 Then add a `<script src="js/themes/dragon.js">` tag in `index.html` (before `js/app.js`) and the path to `FILES` in `sw.js`. The game logic doesn't need to change.
 

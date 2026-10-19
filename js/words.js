@@ -1,17 +1,17 @@
 /* Single-player word lists: difficulty -> category -> words.
-   Easy 3–4 letters, Medium 5–7, Hard 8+. All kid-appropriate. */
+   Easy: very common 5–6 letter words a young kid can spell. Medium 5–7, Hard 8+. All kid-appropriate. */
 window.HM = window.HM || {};
 
 HM.WORDS = {
   easy: {
-    Animals: ["cat", "dog", "cow", "pig", "fox", "owl", "frog", "duck", "bear", "fish", "lion", "goat",
-      "hen", "bee", "ant", "bat", "crab", "deer", "seal", "worm", "yak", "emu", "mole", "toad", "wolf", "lamb", "calf"],
-    Food: ["cake", "pie", "egg", "milk", "corn", "rice", "soup", "taco", "plum", "pear", "bun", "jam",
-      "nut", "bean", "lime", "kiwi", "fig", "tea", "yam", "pea", "ham"],
-    Places: ["zoo", "farm", "park", "pond", "lake", "shop", "city", "town", "home", "yard", "barn",
-      "hill", "cave", "sea", "bay", "gym", "camp", "road", "pool"],
-    Things: ["bed", "cup", "door", "lamp", "sock", "hat", "bag", "box", "key", "mop", "rug", "sink",
-      "tub", "fork", "ball", "kite", "drum", "bell", "boat", "car", "bus", "pen", "toy", "map"]
+    Animals: ["puppy", "kitten", "tiger", "horse", "mouse", "sheep", "zebra", "panda", "rabbit", "monkey",
+      "snake", "whale", "shark", "bunny", "goose", "turtle", "spider", "donkey", "parrot", "camel"],
+    Food: ["apple", "pizza", "bread", "candy", "grape", "lemon", "melon", "peach", "salad", "pasta",
+      "juice", "honey", "toast", "cookie", "banana", "carrot", "cheese", "butter", "cherry", "muffin"],
+    Places: ["house", "beach", "river", "school", "store", "field", "ocean", "garden", "forest", "island",
+      "castle", "jungle", "street", "bridge", "market", "planet"],
+    Things: ["chair", "table", "clock", "train", "truck", "plane", "robot", "paper", "pencil", "crayon",
+      "piano", "water", "rocket", "button", "jacket", "bucket", "ladder", "pillow", "window", "flower"]
   },
   medium: {
     Animals: ["tiger", "zebra", "horse", "shark", "snake", "rabbit", "turtle", "monkey", "panda", "whale",

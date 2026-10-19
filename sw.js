@@ -1,6 +1,6 @@
 /* Service worker: caches every file so the game plays offline.
    Bump CACHE whenever any file changes, so installed copies pick up the new version. */
-const CACHE = "hangman-v1";
+const CACHE = "hangman-v2";
 const FILES = [
   "./",
   "index.html",

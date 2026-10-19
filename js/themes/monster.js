@@ -1,12 +1,16 @@
-/* Monster: a friendly-silly monster takes one step closer with each wrong guess. */
+/* Monster: a friendly-silly monster takes one step closer with each wrong guess.
+   Stages: 1 step, 2 step, 3 picks a flower*, 4 step, 5 step, 6 sticks its tongue out*, 7 step,
+   8 last step, right up close for a big (gentle) hug.
+   (* optional details, skipped in 6-miss games) */
 (function () {
   const HORIZON = 120;
 
   // Monster in local coordinates: feet on y=0, centred on x=0, about 120 tall.
-  function monster(face) {
+  function monster(face, tongue) {
     const mouth = face === "o"
       ? `<ellipse class="c thin fb" cx="0" cy="-32" rx="7" ry="9"/>`
       : `<path class="c" d="M-22 -36 Q0 -16 22 -36"/>
+         ${tongue ? `<path d="M2 -27 q4 14 12 6 l-4 -10 z" fill="#f29a9a" stroke="#f29a9a" stroke-width="2"/>` : ""}
          <path class="fc" d="M-10 -30 L-6 -23 L-2 -29 Z M2 -29 L6 -23 L10 -30 Z"/>`;
     return `
       <ellipse class="a fb" cx="-20" cy="0" rx="13" ry="5"/><ellipse class="a fb" cx="20" cy="0" rx="13" ry="5"/>
@@ -19,10 +23,14 @@
   }
   const arms = (lx, ly, rx, ry) =>
     `<path class="a" d="M-44 -46 Q${lx - 6} ${(ly - 46) / 2 - 30} ${lx} ${ly} M44 -46 Q${rx + 6} ${(ry - 46) / 2 - 30} ${rx} ${ry}"/>`;
+  // A flower held in the monster's right hand.
+  const flower = `<path class="d thin" d="M58 -18 L66 -52"/>
+    <g transform="translate(67 -58)" fill="#f29a9a">
+      <circle cx="0" cy="-8" r="6"/><circle cx="8" cy="0" r="6"/><circle cx="0" cy="8" r="6"/><circle cx="-8" cy="0" r="6"/>
+      <circle r="5" fill="#f3d36b"/></g>`;
 
-  function placed(stage) {
-    const s = 0.34 + stage * 0.11;
-    return { x: 188 - stage * 11, y: HORIZON + 14 + stage * 11, s };
+  function placed(steps) {
+    return { x: 188 - steps * 11, y: HORIZON + 14 + steps * 11, s: 0.34 + steps * 0.11 };
   }
 
   function scenery() {
@@ -35,10 +43,11 @@
     id: "monster",
     name: "Monster",
     accent: "#b8e986",
+    optional: [3, 6],
 
-    render(stage, outcome) {
+    render(v, outcome) {
       if (outcome === "win") {
-        const p = placed(Math.min(stage, 5));
+        const p = placed(Math.min(v.core, 5));
         return `${scenery()}
           <g transform="translate(${p.x} ${p.y}) scale(${p.s})">
             <g class="mn-run">${monster("o")}${arms(-70, -80, 70, -80)}</g>
@@ -46,10 +55,10 @@
           <path class="d thin mn-dust" d="M${p.x - 20} ${p.y} q-8 -10 -18 -4 q-8 -10 -16 0"/>
           <text class="t mn-bye" x="70" y="60" text-anchor="middle" font-size="22">Eep! Bye!</text>`;
       }
-      if (outcome === "lose") {
+      if (outcome === "lose" || v.core >= 6) {
         return `${scenery()}
           <g transform="translate(120 212) scale(1.12)"><g class="mn-hug">
-            ${monster()}
+            ${monster(null, v.has(6))}
             <path class="fc" d="M0 -14 C-10 -26 -26 -16 -14 -4 L0 8 L14 -4 C26 -16 10 -26 0 -14 Z" opacity=".9"/>
             ${arms(-10, -6, 10, -6)}
           </g></g>
@@ -57,10 +66,14 @@
              M196 46 c-4 -6 -12 -2 -6 4 l6 6 l6 -6 c6 -6 -2 -10 -6 -4 Z"/></g>
           <text class="t" x="200" y="100" text-anchor="middle" font-size="20">hug!</text>`;
       }
-      const p = placed(stage);
+      const p = placed(v.core);
+      const stepped = v.last && !this.optional.includes(v.last);
       return `${scenery()}
         <g transform="translate(${p.x} ${p.y}) scale(${p.s})">
-          <g class="${stage > 0 ? "mn-step" : ""}">${monster()}${arms(-58, -18, 58, -18)}</g>
+          <g class="${stepped ? "mn-step" : ""}">
+            ${monster(null, v.has(6))}${arms(-58, -18, 58, -18)}
+            ${v.has(3) ? `<g class="${v.last === 3 ? "draw-in" : ""}">${flower}</g>` : ""}
+          </g>
         </g>`;
     },
 

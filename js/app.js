@@ -8,10 +8,10 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const DIFFS = {
-    easy: { name: "Easy", desc: "3–4 letter words", misses: 6 },
+    easy: { name: "Easy", desc: "Common words, 8 misses, a free letter", misses: 8, freeLetter: true },
     medium: { name: "Medium", desc: "5–7 letter words", misses: 6 },
     hard: { name: "Hard", desc: "8+ letter words", misses: 6 },
-    impossible: { name: "Impossible", desc: "Long words, no hint, 5 misses", misses: 5 }
+    impossible: { name: "Impossible", desc: "Long words, no hint", misses: 6 }
   };
   const CHEERS = ["You got it!", "Awesome job!", "Super speller!", "Nailed it!", "Brain power!", "Hooray!"];
   const MP_MIN = 2, MP_MAX = 6;
@@ -71,13 +71,13 @@
 
   /* ---------- Themes ---------- */
   let svgCount = 0;
-  function themeSvg(theme, stage, outcome) {
+  function themeSvg(theme, view, outcome) {
     const id = "chalk" + (++svgCount);
     return `<svg class="th" viewBox="0 0 240 220" style="--accent:${theme.accent}" focusable="false">
       <defs><filter id="${id}" filterUnits="userSpaceOnUse" x="-20" y="-20" width="280" height="260">
         <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="4" result="n"/>
         <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/></filter></defs>
-      <g filter="url(#${id})">${theme.render(stage, outcome)}</g></svg>`;
+      <g filter="url(#${id})">${theme.render(view, outcome)}</g></svg>`;
   }
   function resolveTheme(choice) {
     if (choice !== "random" && HM.themes.some(t => t.id === choice)) return choice;
@@ -100,7 +100,7 @@
       b.setAttribute("aria-checked", String(o.id === selected));
       if (o.theme) {
         b.style.setProperty("--card-accent", o.theme.accent);
-        b.innerHTML = themeSvg(o.theme, 3, null) + `<span>${esc(o.name)}</span>`;
+        b.innerHTML = themeSvg(o.theme, HM.themeView(o.theme, 4, 8), null) + `<span>${esc(o.name)}</span>`;
       } else {
         b.innerHTML = `<span class="dice" aria-hidden="true">?</span><span>Random</span>`;
       }
@@ -226,6 +226,8 @@
     } else {
       const w = pickWord(diff);
       game = HM.Engine.newFixed(w.word, DIFFS[diff].misses);
+      const free = DIFFS[diff].freeLetter ? HM.Engine.revealRandom(game) : null;
+      if (free) setTimeout(() => toast(`Here's a free letter: ${free.toUpperCase()}`), 300);
       hint = w.category;
     }
     const themeId = resolveTheme(settings.theme);
@@ -289,11 +291,11 @@
     $("hearts").setAttribute("aria-label", `${left} guesses left`);
 
     // Drawing
-    const stage = Math.min(6, HM.Engine.stage(g));
+    const view = HM.themeView(theme, g.wrong.length, g.maxMisses);
     const outcome = g.over ? (g.won ? "win" : "lose") : null;
-    const key = `${G.themeId}|${stage}|${outcome}`;
+    const key = `${G.themeId}|${view.done.length}|${outcome}`;
     if (key !== drawnKey) {
-      $("drawing").innerHTML = themeSvg(theme, stage, outcome);
+      $("drawing").innerHTML = themeSvg(theme, view, outcome);
       drawnKey = key;
     }
 

@@ -95,8 +95,17 @@ HM.Engine = (function () {
     return { letter, correct, positions, won, lost };
   }
 
-  // Picture stage 0..6. Games with fewer than 6 allowed misses start further along.
-  const stage = game => game.wrong.length + (6 - game.maxMisses);
+  /* Give away one random letter (every place it appears) as a free start.
+     Never gives away the whole word. Returns the letter, or null if there's nothing safe to reveal. */
+  function revealRandom(game) {
+    if (game.mode !== "fixed" || game.over) return null;
+    const hidden = [...new Set([...game.word].filter((ch, i) => isLetter(ch) && !game.revealed[i]))];
+    if (hidden.length < 2) return null;
+    const letter = hidden[Math.floor(Math.random() * hidden.length)];
+    game.guessed.push(letter);
+    for (let i = 0; i < game.word.length; i++) if (game.word[i] === letter) game.revealed[i] = letter;
+    return letter;
+  }
 
-  return { newFixed, newEvil, guess, stage, isLetter };
+  return { newFixed, newEvil, guess, revealRandom, isLetter };
 })();
