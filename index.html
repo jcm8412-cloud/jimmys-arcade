@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hangman</title>
+<meta name="description" content="A chalkboard Hangman game for kids. Plays offline.">
+<meta name="theme-color" content="#263d30">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hangman">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/gochi-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/patrick-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="board" id="board">
+
+  <!-- Main menu -->
+  <section class="screen menu" id="scr-menu" hidden>
+    <div class="menu-top">
+      <button class="icon-btn" id="btn-howto" aria-label="How to play">?</button>
+      <button class="icon-btn" id="btn-settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+      </button>
+    </div>
+    <h1 class="logo">Hang<span>man</span></h1>
+    <p class="tagline">Guess the word before the picture is finished!</p>
+    <div class="resume" id="resume-card" hidden>
+      <p>You have a multiplayer game in progress.</p>
+      <div class="row">
+        <button class="btn" id="btn-resume">Resume game</button>
+        <button class="btn ghost" id="btn-discard">Quit it</button>
+      </div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn big" id="btn-single">Single Player</button>
+      <button class="btn big" id="btn-multi">Multiplayer</button>
+    </div>
+    <div class="theme-section">
+      <h2 class="label">Picture theme</h2>
+      <div class="theme-grid" id="menu-themes" role="radiogroup" aria-label="Picture theme"></div>
+    </div>
+  </section>
+
+  <!-- How to play -->
+  <section class="screen" id="scr-howto" hidden>
+    <header class="topbar"><button class="icon-btn back" data-back aria-label="Back">&larr;</button><h2>How to play</h2><span></span></header>
+    <ol class="howto">
+      <li>Guess the secret word one letter at a time.</li>
+      <li>Right letters fill in the blanks. Wrong letters add to the picture.</li>
+      <li>Fill in the whole word before the picture is finished to win!</li>
+      <li>Playing with friends? One player picks a word, everyone else takes turns guessing.</li>
+    </ol>
+  </section>
+
+  <!-- Settings -->
+  <section class="screen" id="scr-settings" hidden>
+    <header class="topbar"><button class="icon-btn back" data-back aria-label="Back">&larr;</button><h2>Settings</h2><span></span></header>
+    <div class="settings">
+      <label class="toggle"><span>Sound effects</span><input type="checkbox" id="set-sound"><i></i></label>
+      <label class="toggle"><span>Vibrate on wrong guess</span><input type="checkbox" id="set-vibrate"><i></i></label>
+      <button class="btn ghost" id="btn-reset-stats">Reset stats</button>
+      <p class="note" id="reset-note" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- Single player: difficulty -->
+  <section class="screen" id="scr-difficulty" hidden>
+    <header class="topbar"><button class="icon-btn back" data-back aria-label="Back">&larr;</button><h2>Pick a level</h2><span></span></header>
+    <div class="levels" id="levels"></div>
+    <p class="note">Theme: <b id="diff-theme"></b> &middot; change it on the main menu</p>
+  </section>
+
+  <!-- Game (both modes) -->
+  <section class="screen game" id="scr-game" hidden>
+    <header class="topbar">
+      <button class="icon-btn back" id="btn-game-menu" aria-label="Menu">&larr;</button>
+      <h2 id="game-title"></h2>
+      <span class="hearts" id="hearts" aria-label=""></span>
+    </header>
+    <div class="drawing" id="drawing" aria-hidden="true"></div>
+    <p class="hint" id="hint"></p>
+    <div class="word" id="word" aria-live="polite"></div>
+    <p class="turn" id="turn" aria-live="polite"></p>
+    <div class="bottom">
+      <div class="keys" id="keys" aria-label="Letters"></div>
+      <div class="result" id="result" hidden>
+        <p class="banner" id="banner" aria-live="assertive"></p>
+        <p class="reveal" id="reveal"></p>
+        <div class="row" id="result-actions"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Multiplayer: setup -->
+  <section class="screen" id="scr-mp-setup" hidden>
+    <header class="topbar"><button class="icon-btn back" data-back aria-label="Back">&larr;</button><h2>Multiplayer</h2><span></span></header>
+    <h3 class="label">Players</h3>
+    <div class="players" id="mp-players"></div>
+    <button class="btn ghost" id="mp-add">+ Add player</button>
+    <h3 class="label">Rounds</h3>
+    <div class="stepper">
+      <button class="icon-btn" id="mp-rounds-minus" aria-label="Fewer rounds">&minus;</button>
+      <output id="mp-rounds">3</output>
+      <button class="icon-btn" id="mp-rounds-plus" aria-label="More rounds">+</button>
+    </div>
+    <p class="note" id="mp-rounds-note"></p>
+    <button class="btn big" id="mp-start">Start game</button>
+  </section>
+
+  <!-- Multiplayer: pass the phone (generic) -->
+  <section class="screen center" id="scr-pass" hidden>
+    <p class="pass-small" id="pass-small"></p>
+    <p class="pass-big" id="pass-big"></p>
+    <p class="note" id="pass-note"></p>
+    <button class="btn big" id="pass-go"></button>
+    <button class="btn ghost" id="pass-menu">Menu</button>
+  </section>
+
+  <!-- Multiplayer: word master enters the word -->
+  <section class="screen" id="scr-mp-word" hidden>
+    <header class="topbar"><button class="icon-btn back" id="mp-word-menu" aria-label="Menu">&larr;</button><h2 id="mp-word-title"></h2><span></span></header>
+    <label class="field">
+      <span>Secret word or short phrase</span>
+      <span class="secret-row">
+        <input id="mp-secret" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="40" placeholder="Shh... type it here">
+        <button class="icon-btn" id="mp-peek" type="button" aria-label="Show word" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </span>
+    </label>
+    <p class="err" id="mp-secret-err" aria-live="polite"></p>
+    <label class="field">
+      <span>Hint (optional)</span>
+      <input id="mp-hint" type="text" autocomplete="off" maxlength="30" placeholder="e.g. An animal">
+    </label>
+    <h3 class="label">Picture theme for this round</h3>
+    <div class="theme-grid" id="mp-themes" role="radiogroup" aria-label="Picture theme"></div>
+    <button class="btn big" id="mp-word-done">Done</button>
+  </section>
+
+  <!-- Multiplayer: scoreboard (end of round and end of game) -->
+  <section class="screen" id="scr-scores" hidden>
+    <header class="topbar"><button class="icon-btn back" id="scores-menu" aria-label="Menu">&larr;</button><h2 id="scores-title"></h2><span></span></header>
+    <p class="scores-word" id="scores-word"></p>
+    <table class="scoreboard">
+      <thead><tr><th>Player</th><th id="scores-round-h">This round</th><th>Total</th></tr></thead>
+      <tbody id="scores-body"></tbody>
+    </table>
+    <p class="winner" id="scores-winner"></p>
+    <div class="col" id="scores-actions"></div>
+  </section>
+
+  <!-- Confirm dialog -->
+  <div class="dialog" id="dialog" hidden>
+    <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="dialog-text">
+      <p id="dialog-text"></p>
+      <div class="row">
+        <button class="btn" id="dialog-yes"></button>
+        <button class="btn ghost" id="dialog-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" aria-live="polite"></div>
+</div>
+
+<script src="js/words.js"></script>
+<script src="js/impossible-words.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/themes/registry.js"></script>
+<script src="js/themes/classic.js"></script>
+<script src="js/themes/snowman.js"></script>
+<script src="js/themes/balloons.js"></script>
+<script src="js/themes/monster.js"></script>
+<script src="js/themes/pumpkin.js"></script>
+<script src="js/themes/rocket.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

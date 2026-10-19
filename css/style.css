@@ -1,0 +1,317 @@
+/* Chalkboard Hangman. One deliberate dark chalkboard look; the theme's --accent tints it. */
+@font-face {
+  font-family: "Gochi Hand";
+  src: url("../fonts/gochi-hand-latin.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Patrick Hand";
+  src: url("../fonts/patrick-hand-latin.woff2") format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --board: #2f4a3a;
+  --board-dark: #263d30;
+  --frame: #8a5a34;
+  --chalk: #f2f0e6;
+  --chalk-dim: #b9c4b6;
+  --yellow: #f3d36b;
+  --pink: #f29a9a;
+  --blue: #9fd3e8;
+  --accent: #f3d36b;
+  --accent-ink: #263d30;
+  --font-display: "Gochi Hand", "Comic Sans MS", "Chalkboard SE", cursive;
+  --font-body: "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive;
+  --tint: color-mix(in srgb, var(--accent) 9%, var(--board));
+  --tint-dark: color-mix(in srgb, var(--accent) 6%, var(--board-dark));
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--frame);
+  background-image: repeating-linear-gradient(92deg, rgba(0,0,0,.06) 0 3px, transparent 3px 11px);
+  color: var(--chalk);
+  font-family: var(--font-body);
+  font-size: 20px;
+  line-height: 1.3;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+button, input { font: inherit; color: inherit; }
+button { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+[hidden] { display: none !important; }
+
+/* The chalkboard fills the screen inside a thin wooden frame and the safe areas. */
+.board {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  left: calc(env(safe-area-inset-left, 0px) + 6px);
+  right: calc(env(safe-area-inset-right, 0px) + 6px);
+  background: var(--board-dark);
+  background: radial-gradient(ellipse at 30% 15%, color-mix(in srgb, var(--accent) 6%, #36533f) 0%, var(--tint) 45%, var(--tint-dark) 100%);
+  border-radius: 6px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.35), 0 3px 0 #6b4426;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background .4s;
+}
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.screen.center { justify-content: center; align-items: center; text-align: center; }
+
+/* ---------- Shared bits ---------- */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; }
+.label { font-family: var(--font-body); font-size: 1rem; color: var(--chalk-dim); margin-top: 4px; }
+.note { color: var(--chalk-dim); font-size: 1rem; margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.col { display: flex; flex-direction: column; gap: 10px; }
+
+.btn {
+  min-height: 48px;
+  padding: 8px 20px;
+  font-size: 1.15rem;
+  color: var(--accent-ink);
+  background: var(--chalk);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn.big { min-height: 60px; font-family: var(--font-display); font-size: 1.7rem; background: var(--accent); }
+.btn.ghost { background: transparent; color: var(--chalk); border: 2px solid rgba(242,240,230,.55); }
+.btn:active { transform: translateY(1px); }
+.icon-btn {
+  min-width: 44px; min-height: 44px;
+  display: inline-grid; place-items: center;
+  font-size: 1.5rem; line-height: 1;
+  background: transparent; color: var(--chalk);
+  border: 2px solid rgba(242,240,230,.4); border-radius: 50%;
+  cursor: pointer; padding: 0;
+}
+.icon-btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.icon-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.btn:focus-visible, .icon-btn:focus-visible, .key:focus-visible, .theme-card:focus-visible,
+.level:focus-visible, input:focus-visible, .toggle input:focus-visible + i {
+  outline: 3px solid var(--blue); outline-offset: 2px;
+}
+
+.topbar { display: grid; grid-template-columns: 44px 1fr minmax(44px, auto); align-items: center; gap: 8px; }
+.topbar h2 { text-align: center; font-size: 1.6rem; line-height: 1.1; overflow-wrap: anywhere; }
+
+input[type="text"], input[type="password"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  font-size: 1.2rem; /* >= 16px so iOS doesn't zoom */
+  background: rgba(0,0,0,.22);
+  border: 2px solid rgba(242,240,230,.55);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+input::placeholder { color: rgba(242,240,230,.45); }
+.err { color: var(--pink); font-size: 1rem; min-height: 1.2em; margin: -8px 0 0; }
+
+/* ---------- Menu ---------- */
+.menu { gap: 16px; }
+.menu-top { display: flex; justify-content: flex-end; gap: 10px; }
+.logo { font-size: clamp(3.2rem, 15vw, 4.6rem); line-height: .9; text-align: center; margin-top: -8px; }
+.logo span { color: var(--accent); }
+.tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.menu-buttons { display: grid; gap: 12px; }
+.resume { border: 2px dashed var(--accent); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.resume p { margin: 0 0 8px; }
+
+.theme-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.theme-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 44px; padding: 6px 2px 4px;
+  background: rgba(0,0,0,.14);
+  border: 2px dashed rgba(242,240,230,.35);
+  border-radius: 10px; cursor: pointer;
+  font-size: .95rem; color: var(--chalk);
+}
+.theme-card svg { width: 100%; height: auto; max-height: 64px; display: block; }
+.theme-card[aria-checked="true"] { border-style: solid; border-color: var(--card-accent, var(--accent)); color: var(--card-accent, var(--accent)); background: rgba(0,0,0,.25); }
+.theme-card .dice { font-family: var(--font-display); font-size: 2.4rem; line-height: 64px; height: 64px; }
+
+/* ---------- How to play / settings ---------- */
+.howto { margin: 0; padding-left: 1.4em; display: grid; gap: 14px; font-size: 1.25rem; }
+.howto li::marker { color: var(--accent); font-family: var(--font-display); }
+.settings { display: grid; gap: 14px; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; cursor: pointer; font-size: 1.2rem; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle i {
+  flex: none; width: 58px; height: 32px; border-radius: 16px;
+  border: 2px solid rgba(242,240,230,.55); position: relative; transition: background .2s;
+}
+.toggle i::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--chalk-dim); transition: transform .2s, background .2s;
+}
+.toggle input:checked + i { background: color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
+.toggle input:checked + i::after { transform: translateX(26px); background: var(--accent); }
+
+/* ---------- Difficulty ---------- */
+.levels { display: grid; gap: 10px; }
+.level {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px;
+  text-align: left; padding: 10px 14px; min-height: 64px;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.4); border-radius: 12px; cursor: pointer;
+}
+.level b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; color: var(--accent); }
+.level small { grid-column: 1; font-size: 1rem; color: var(--chalk-dim); }
+.level .stats { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(3, auto); gap: 0 10px; text-align: center; font-size: .85rem; color: var(--chalk-dim); }
+.level .stats span { font-size: 1.3rem; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.level .stats i { font-style: normal; }
+.level.impossible b { color: var(--pink); }
+
+/* ---------- Game ---------- */
+/* Narrower side padding here so 7 keys per row stay >= 44px wide on a 360px phone. */
+.game { gap: 8px; padding: 10px 8px; overflow: hidden; }
+.hearts { color: var(--pink); font-size: 1.15rem; letter-spacing: 1px; text-align: right; white-space: nowrap; }
+.hearts .gone { color: rgba(242,240,230,.3); }
+.drawing { flex: 1 1 auto; min-height: 110px; display: flex; justify-content: center; }
+.drawing svg { height: 100%; width: 100%; max-width: 560px; }
+.hint, .word, .turn { flex: none; }
+.hint { text-align: center; color: var(--blue); margin: 0; font-size: 1.15rem; min-height: 1.3em; }
+.hint b { font-weight: 400; color: var(--chalk); }
+.word {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
+  gap: 10px 18px; min-height: calc(var(--slot, 40px) * 1.3);
+}
+.word .w { display: flex; gap: calc(var(--slot, 40px) * .14); }
+.slot {
+  width: var(--slot, 40px);
+  height: calc(var(--slot, 40px) * 1.25);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: calc(var(--slot, 40px) * 1.05);
+  line-height: calc(var(--slot, 40px) * 1.2);
+  border-bottom: 4px solid var(--chalk);
+  text-transform: uppercase;
+}
+.slot.missed { color: var(--pink); }
+.slot.pop { animation: pop .35s ease-out; }
+@keyframes pop { 0% { transform: scale(.4); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+.turn { text-align: center; font-family: var(--font-display); font-size: 1.9rem; line-height: 1.1; margin: 0; color: var(--accent); min-height: 0; }
+.turn:empty { display: none; }
+
+.bottom { flex: none; margin-top: 4px; }
+.keys { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 6px 4px; max-width: 560px; margin: 0 auto; }
+.key {
+  grid-column: span 2;
+  min-height: 48px;
+  font-family: var(--font-display); font-size: 1.6rem; line-height: 1;
+  background: rgba(255,255,255,.05);
+  border: 2px solid rgba(242,240,230,.55);
+  border-radius: 9px;
+  padding: 0;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+/* Last row (V–Z) is centered: 5 keys starting one half-column in. */
+.key:nth-child(22) { grid-column: 3 / span 2; }
+.key:active:not(:disabled) { transform: scale(.94); background: rgba(255,255,255,.15); }
+.key:disabled { cursor: default; }
+.key.right { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.key.wrong { opacity: .3; text-decoration: line-through; }
+@media (hover: hover) { .key:hover:not(:disabled) { background: rgba(255,255,255,.12); } }
+@media (min-width: 600px) {
+  .keys { grid-template-columns: repeat(18, minmax(0, 1fr)); }
+  .key:nth-child(22) { grid-column: auto / span 2; }
+  .key:nth-child(19) { grid-column: 2 / span 2; }
+  .key { min-height: 60px; font-size: 1.9rem; }
+  .hint { font-size: 1.35rem; }
+}
+
+.result { text-align: center; display: grid; gap: 6px; padding-top: 4px; }
+.banner { font-family: var(--font-display); font-size: 2.1rem; line-height: 1.1; margin: 0; }
+.banner.win { color: var(--accent); }
+.banner.lose { color: var(--pink); }
+.reveal { margin: 0; color: var(--chalk-dim); }
+.reveal b { color: var(--chalk); font-family: var(--font-display); font-weight: 400; font-size: 1.4rem; letter-spacing: .05em; text-transform: uppercase; }
+.result .row .btn { flex: 1 1 140px; max-width: 240px; }
+
+/* ---------- Multiplayer ---------- */
+.players { display: grid; gap: 8px; }
+.player-row { display: flex; gap: 8px; align-items: center; }
+.player-row .num { width: 1.6em; text-align: center; color: var(--accent); font-family: var(--font-display); font-size: 1.4rem; }
+.stepper { display: flex; align-items: center; gap: 16px; }
+.stepper output { font-family: var(--font-display); font-size: 2rem; min-width: 2ch; text-align: center; }
+#mp-start { margin-top: 6px; }
+
+.pass-small { margin: 0; color: var(--chalk-dim); font-size: 1.2rem; }
+.pass-big { margin: 0; font-family: var(--font-display); font-size: clamp(2.4rem, 12vw, 3.6rem); line-height: 1.05; color: var(--accent); overflow-wrap: anywhere; }
+#scr-pass .btn.big { min-width: 240px; margin-top: 10px; }
+
+.field { display: grid; gap: 6px; }
+.field > span:first-child { color: var(--chalk-dim); font-size: 1rem; }
+.secret-row { display: flex; gap: 8px; align-items: center; }
+
+.scores-word { text-align: center; margin: 0; }
+.scores-word b { font-family: var(--font-display); font-weight: 400; font-size: 1.8rem; color: var(--chalk); text-transform: uppercase; letter-spacing: .05em; }
+.scoreboard { width: 100%; border-collapse: collapse; font-size: 1.2rem; }
+.scoreboard th { color: var(--chalk-dim); font-weight: 400; font-size: 1rem; text-align: right; padding: 4px 6px; }
+.scoreboard th:first-child, .scoreboard td:first-child { text-align: left; }
+.scoreboard td { padding: 8px 6px; border-top: 2px dashed rgba(242,240,230,.2); text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.scoreboard .plus { color: var(--accent); }
+.scoreboard tr.top td { color: var(--accent); font-family: var(--font-display); font-size: 1.5rem; }
+.scoreboard .role { color: var(--chalk-dim); font-size: .9rem; }
+.winner { text-align: center; margin: 0; font-family: var(--font-display); font-size: 2rem; color: var(--accent); }
+.winner:empty { display: none; }
+#scores-actions .btn.big { font-size: 1.4rem; }
+
+/* ---------- Dialog & toast ---------- */
+.dialog { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; z-index: 10; }
+.dialog-box { background: var(--board); border: 2px solid rgba(242,240,230,.4); border-radius: 14px; padding: 18px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.dialog-box p { margin: 0 0 14px; font-size: 1.2rem; }
+.toast {
+  position: absolute; left: 50%; top: 62px; transform: translate(-50%, -12px);
+  background: var(--chalk); color: var(--accent-ink); padding: 6px 16px; border-radius: 999px;
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; white-space: nowrap; z-index: 11;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Theme drawings (shared chalk vocabulary for theme files) ---------- */
+.th .c, .th .d, .th .a { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 5; }
+.th .c { stroke: var(--chalk); }
+.th .d { stroke: var(--chalk-dim); stroke-width: 6; }
+.th .a { stroke: var(--accent); }
+.th .thin { stroke-width: 3; }
+.th .fc { fill: var(--chalk); stroke: none; }
+.th .fa { fill: var(--accent); }
+.th .fb { fill: var(--board); }
+.th .fa-soft { fill: var(--accent); fill-opacity: .2; }
+.th .t { fill: var(--chalk); font-family: var(--font-display); stroke: none; }
+.th .t.dim { fill: var(--chalk-dim); }
+.th .draw-in { animation: draw-in .45s ease-out; }
+@keyframes draw-in { from { opacity: 0; } }
+
+/* Short screens: shrink the drawing first, then the keys. */
+@media (max-height: 640px) {
+  .key { min-height: 44px; font-size: 1.4rem; }
+  .game { gap: 4px; }
+  .topbar h2 { font-size: 1.35rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
