@@ -1,7 +1,7 @@
 /* Service worker: caches the shell and every game so the arcade plays offline.
    Game files come from games/index.js, so adding a game doesn't mean editing this file.
    Bump CACHE whenever any file changes, so installed copies pick up the new version. */
-const CACHE = "jimmys-arcade-v4";
+const CACHE = "jimmys-arcade-v5";
 const SHELL_FILES = [
   "./",
   "index.html",
@@ -28,8 +28,10 @@ const SHELL_FILES = [
 importScripts("games/index.js");
 const GAME_FILES = self.Arcade.GAME_LIST.flatMap(g => g.files.map(f => `games/${g.folder}/${f}`));
 
+// cache: "reload" skips the browser's HTTP cache, so a new version never stores stale copies of files.
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL_FILES.concat(GAME_FILES))).then(() => self.skipWaiting()));
+  const requests = SHELL_FILES.concat(GAME_FILES).map(url => new Request(url, { cache: "reload" }));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {

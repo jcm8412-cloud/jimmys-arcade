@@ -428,7 +428,8 @@
       start();
     }
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      // updateViaCache "none": check sw.js and the game list it imports without the HTTP cache.
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
     }
   }
   boot();
