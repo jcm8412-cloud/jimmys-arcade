@@ -1,0 +1,72 @@
+/* Connect Four's own styles, scoped under .c4 (the class on its screens). */
+
+/* ---------- Menu & levels ---------- */
+.c4.menu { gap: 16px; }
+.c4 .title { font-size: clamp(2.8rem, 13vw, 4.2rem); line-height: .95; text-align: center; }
+.c4 .title span { color: var(--accent); }
+.c4 .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.c4 .menu-buttons { display: grid; gap: 12px; }
+.c4 .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.c4 .playing-as .avatar { width: 40px; height: 40px; }
+.c4 .playing-as b { font-weight: 400; color: var(--accent); }
+.c4 .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.c4 .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+.c4 .levels { display: grid; gap: 10px; }
+.c4 .level {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px;
+  text-align: left; padding: 10px 14px; min-height: 64px;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.4); border-radius: 12px; cursor: pointer;
+}
+.c4 .level b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; color: var(--accent); }
+.c4 .level small { grid-column: 1; font-size: 1rem; color: var(--chalk-dim); }
+.c4 .level .stats { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(3, auto); gap: 0 10px; text-align: center; font-size: .85rem; color: var(--chalk-dim); }
+.c4 .level .stats span { font-size: 1.3rem; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.c4 .level .stats i { font-style: normal; }
+.c4 .level.impossible b { color: var(--pink); }
+
+/* ---------- Game ---------- */
+.c4.play { gap: 10px; padding: 10px 8px; }
+.c4 .undo { min-height: 44px; padding: 4px 12px; font-size: 1rem; }
+.c4 .undo:disabled { opacity: .4; cursor: default; }
+.c4 .turn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0;
+  font-family: var(--font-display); font-size: 1.9rem; line-height: 1.1; min-height: 48px;
+}
+.c4 .turn .avatar { width: 44px; height: 44px; }
+.c4 .turn .mini { width: 32px; height: 32px; }
+.c4 .turn .mini .m { fill: var(--board-dark); stroke: none; }
+.c4 .turn .mini .m.ring { fill: none; stroke: var(--board-dark); stroke-width: 3; }
+.c4 .turn.thinking span { animation: c4-think 1s ease-in-out infinite alternate; }
+@keyframes c4-think { from { opacity: .45; } }
+
+.c4 .board-wrap { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.c4 .grid { width: 100%; max-width: 560px; max-height: 100%; height: auto; overflow: visible; touch-action: manipulation; }
+.c4 .grid .frame { fill: rgba(0,0,0,.18); stroke: var(--chalk); stroke-width: 6; }
+.c4 .grid .hole { fill: rgba(0,0,0,.22); stroke: rgba(242,240,230,.35); stroke-width: 3; stroke-dasharray: 7 6; }
+.c4 .grid .piece circle:first-child { stroke-width: 4; }
+.c4 .grid .mark { fill: var(--board-dark); stroke: none; }
+.c4 .grid .mark.ring { fill: none; stroke: var(--board-dark); stroke-width: 7; }
+.c4 .grid .col-hit { fill: transparent; cursor: pointer; }
+.c4 .grid .col-hit.full, .c4 .grid.locked .col-hit { cursor: default; }
+@media (hover: hover) { .c4 .grid:not(.locked) .col-hit:not(.full):hover { fill: rgba(242,240,230,.06); } }
+.c4 .grid .drop { animation: c4-drop var(--dur, .4s) cubic-bezier(.45, 0, .8, .6); }@keyframes c4-drop {
+  0% { transform: translateY(var(--drop)); }
+  80% { transform: translateY(0); }
+  90% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+.c4 .grid .win circle:first-child { stroke: var(--chalk); stroke-width: 9; animation: c4-win .6s ease-in-out 3 alternate; }
+@keyframes c4-win { from { stroke-opacity: .2; } }
+
+.c4 .result { flex: none; text-align: center; display: grid; gap: 4px; }
+.c4 .result-art { height: 140px; display: flex; justify-content: center; }
+.c4 .result-art svg { height: 100%; width: auto; }
+.c4 .banner { font-family: var(--font-display); font-size: 2.1rem; line-height: 1.1; margin: 0; }
+.c4 .banner.win { color: var(--accent); }
+.c4 .banner.lose { color: var(--pink); }
+.c4 .result .row .btn { flex: 1 1 140px; max-width: 240px; }
+
+@media (max-height: 640px) {
+  .c4 .result-art { height: 100px; }
+  .c4 .turn { font-size: 1.5rem; }
+}

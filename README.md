@@ -8,7 +8,9 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Silly Stories:** fill in words without seeing the story, then reveal it and have it read aloud.
   - Play solo, or pass-and-play for 2–6 players.
   - Save favorites to reread later.
-- **Connect Four, Tic-Tac-Toe:** coming soon.
+- **Connect Four:** play the computer at four levels, or two players on one phone.
+  - Undo is unlimited on Easy, 3 per game on Medium, and off on Hard and Impossible.
+- **Tic-Tac-Toe:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -77,7 +79,8 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/index.js` | The list of games, one line each |
 | `games/hangman/` | Hangman: rules (`engine.js`), word lists, screens (`game.js`) and styles |
 | `games/silly-stories/` | Silly Stories: screens (`game.js`), story templates (`stories.json`), word types and ideas (`words.js`) |
-| `games/*/game.js` | Coming-soon placeholders for the other games |
+| `games/connect-four/` | Connect Four: rules and computer players (`ai.js`), screens (`game.js`) |
+| `games/*/game.js` | Coming-soon placeholder for Tic-Tac-Toe |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -92,6 +95,8 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `silly-stories:favorites`: up to 50 saved stories
 - `silly-stories:stats`: stories made per player
 - `silly-stories:recent` and `silly-stories:lastSetup`
+- `connect-four:stats`: for each player, wins, losses and ties against each computer level and against each other player
+- `connect-four:lastSetup`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -181,6 +186,22 @@ Add an object to `games/silly-stories/stories.json`:
 - Aim for 6–10 words to fill in.
 - "a" becomes "an" before a vowel automatically, and words at the start of a sentence are capitalized.
 - Bump `CACHE` in `sw.js` so installed copies get the new story.
+
+## Connect Four computer levels
+
+| Level | How it plays |
+|---|---|
+| Easy | Random moves, but blocks an immediate win about half the time |
+| Medium | Takes a win, blocks your win, otherwise plays near the center without handing you a win |
+| Hard | Searches 5 moves ahead |
+| Impossible | Searches as deep as it can in 0.5 seconds (usually 12–17 moves) |
+
+How Impossible gets its strength:
+- **Center-first move order:** it looks at center moves first, so it finds good moves sooner.
+- **Position memory:** it remembers positions it has already analysed instead of working them out again.
+- **Endgame threat rule:** it favours positions where its "almost four" threats sit on the right rows. The player who moved first wants them on odd rows, the second player on even rows.
+
+With the short pause before it moves, the computer always answers in under a second.
 
 ## Hangman multiplayer scoring
 
