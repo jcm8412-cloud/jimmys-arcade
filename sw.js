@@ -1,31 +1,35 @@
-/* Service worker: caches every file so the game plays offline.
+/* Service worker: caches the shell and every game so the arcade plays offline.
+   Game files come from games/index.js, so adding a game doesn't mean editing this file.
    Bump CACHE whenever any file changes, so installed copies pick up the new version. */
-const CACHE = "hangman-v2";
-const FILES = [
+const CACHE = "jimmys-arcade-v3";
+const SHELL_FILES = [
   "./",
   "index.html",
   "manifest.json",
-  "css/style.css",
   "fonts/gochi-hand-latin.woff2",
   "fonts/patrick-hand-latin.woff2",
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/apple-touch-icon.png",
-  "js/words.js",
-  "js/impossible-words.js",
-  "js/engine.js",
-  "js/themes/registry.js",
-  "js/themes/classic.js",
-  "js/themes/snowman.js",
-  "js/themes/balloons.js",
-  "js/themes/monster.js",
-  "js/themes/pumpkin.js",
-  "js/themes/rocket.js",
-  "js/app.js"
+  "shell/style.css",
+  "shell/storage.js",
+  "shell/avatars.js",
+  "shell/shell.js",
+  "shell/themes/registry.js",
+  "shell/themes/classic.js",
+  "shell/themes/snowman.js",
+  "shell/themes/balloons.js",
+  "shell/themes/monster.js",
+  "shell/themes/pumpkin.js",
+  "shell/themes/rocket.js",
+  "games/index.js"
 ];
 
+importScripts("games/index.js");
+const GAME_FILES = self.Arcade.GAME_LIST.flatMap(g => g.files.map(f => `games/${g.folder}/${f}`));
+
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL_FILES.concat(GAME_FILES))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {

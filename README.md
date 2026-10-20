@@ -1,25 +1,31 @@
-# Chalkboard Hangman
+# Jimmy's Arcade
 
-A Hangman game for kids that plays like an app on phones and tablets. It installs to the home screen, works offline, and needs no account or server. Plain HTML, CSS and JavaScript with no build step.
+A collection of chalkboard games for kids that plays like an app on phones and tablets. It installs to the home screen, works offline, and needs no account or server. Plain HTML, CSS and JavaScript with no build step.
 
-- **Single Player:** Easy, Medium, Hard and Impossible. Impossible is "evil hangman": the computer keeps switching words to dodge your guesses, but always fairly.
-- **Multiplayer:** pass-and-play on one device for 2–6 players. Players take turns as Word Master.
-- **Six picture themes** plus Random: Classic, Snowman, Balloons, Monster, Pumpkin and Rocket.
+- **Hangman:**
+  - Single player has four levels: Easy, Medium, Hard and Impossible ("evil hangman").
+  - Multiplayer is pass-and-play: a Word Master picks the word and everyone else guesses.
+- **Silly Stories, Connect Four, Tic-Tac-Toe:** coming soon.
+- **Shared by every game:**
+  - player profiles with chalk avatars
+  - settings (sound, vibration, read-aloud, reset stats)
+  - picture themes (Classic, Snowman, Balloons, Monster, Pumpkin, Rocket, Random)
+  - a "Pass the phone to…" screen
 
 ## Hosting it on GitHub Pages
 
-1. Create a new GitHub repository (for example `hangman`) and push this folder's contents to it, so `index.html` sits at the repository root.
+1. Push this folder to a GitHub repository (for example `jimmys-arcade`), so `index.html` sits at the repository root.
 2. On GitHub, open the repository's **Settings → Pages**.
 3. Under **Build and deployment**, set **Source** to *Deploy from a branch*, pick `main` and the `/ (root)` folder, then **Save**.
-4. After a minute the game is live at `https://<your-username>.github.io/hangman/`.
+4. After a minute the arcade is live at `https://<your-username>.github.io/jimmys-arcade/`.
 
-Any static host works the same way (Netlify, Cloudflare Pages, your own server). It needs HTTPS for the offline mode and install to work. All paths are relative, so it also runs from a sub-folder.
+Any static host works the same way. It needs HTTPS for the offline mode and install to work. All paths are relative, so it also runs from a sub-folder. Free GitHub accounts can only use Pages on public repositories.
 
 > Don't put these files in a repository that sends `*.woff2` or `*.png` through Git LFS: GitHub Pages serves LFS pointer files instead of the real fonts and icons.
 
 ## Adding it to a home screen
 
-Open the game's web address once while online so it can save itself for offline play.
+Open the arcade's web address once while online so it can save itself for offline play.
 
 **iPhone / iPad (Safari)**
 1. Open the address in **Safari**.
@@ -35,7 +41,7 @@ It now opens full-screen from its icon, and it keeps working with airplane mode 
 
 ## Running it locally
 
-Service workers need `http://`, so opening `index.html` straight from disk works for play but not for offline/install. Serve the folder with any static server, for example:
+Service workers need `http://`, so serve the folder with any static server, for example:
 
 ```bash
 python -m http.server 8000
@@ -43,40 +49,85 @@ python -m http.server 8000
 
 Then open <http://localhost:8000>.
 
-## Updating the game
+## Updating the arcade
 
 The service worker serves everything from its cache. After changing **any** file, bump the version in `sw.js`:
 
 ```js
-const CACHE = "hangman-v2"; // was hangman-v1
+const CACHE = "jimmys-arcade-v4"; // was jimmys-arcade-v3
 ```
 
 Installed copies pick up the new version the next time they're opened online (close and reopen once more to see it).
 
-If you add a new file, also add its path to the `FILES` list in `sw.js`.
+Game files are cached automatically from `games/index.js`. If you add a file to the **shell** (`shell/` or `icons/`), also add it to `SHELL_FILES` in `sw.js`.
 
 ## Files
 
 | Path | What it is |
 |---|---|
-| `index.html` | All screens (menu, levels, game, multiplayer, settings) |
-| `css/style.css` | Chalkboard look, layout, shared chalk classes for theme drawings |
-| `js/engine.js` | Game rules with no DOM: normal words and Impossible's evil hangman |
-| `js/app.js` | Screens, settings, stats, single player, multiplayer, save/resume |
-| `js/words.js` | Single-player word lists by level and category |
-| `js/impossible-words.js` | Impossible mode word pool, grouped by length (8, 9 and 10 letters) |
-| `js/themes/*.js` | One file per picture theme, plus `registry.js` |
+| `index.html` | The shell's screens: home, players, settings, who's playing, pass the phone |
+| `shell/shell.js` | Home screen, players, settings, sound, dialogs, pass screen, player picker, game loading |
+| `shell/storage.js` | Saved data under the `jimmys-arcade:` prefix, plus the one-time move of old Hangman data |
+| `shell/avatars.js` | The 12 chalk player avatars |
+| `shell/themes/*.js` | Picture themes, one file each, plus `registry.js` |
+| `shell/style.css` | Chalkboard look and shared components |
+| `games/index.js` | The list of games, one line each |
+| `games/hangman/` | Hangman: rules (`engine.js`), word lists, screens (`game.js`) and styles |
+| `games/*/game.js` | Coming-soon placeholders for the other games |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
-Settings, stats and a multiplayer game in progress are saved in the browser's `localStorage`.
+## Saved data
+
+Everything is saved in the browser's `localStorage` under keys starting with `jimmys-arcade:`:
+
+- `settings`, `players`, `lastPlayer`, `lastTheme`
+- `hangman:stats`: per-player wins and streaks
+- `hangman:mp`: a multiplayer game in progress
+- `hangman:lastWords` and `hangman:lastSetup`
+
+The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
+
+- settings and the game in progress carry over
+- the old stats go to a new player, whom the arcade asks you to name
+
+## Adding a game
+
+1. Create `games/<name>/` with a `game.js` that calls `Arcade.registerGame({...})`:
+
+   ```js
+   Arcade.registerGame({
+     id: "my-game", name: "My Game", accent: "#9fd3e8",
+     icon: `<circle cx="24" cy="24" r="14"/>`,      // chalk drawing in a 48×48 box; class="acc" uses the accent
+     open() { /* show the game's menu (build screens into #game-root with class "screen") */ },
+     tileStat(playerId) { return "Wins: 3"; },        // optional: text on the home tile
+     resetStats() {}, forgetPlayer(id) {}, autoResume() { return false; }  // optional
+   });
+   ```
+
+2. Add one line for it to `games/index.js`, listing its files in load order.
+
+Games use the shell through `Arcade.*`:
+
+| Helper | What it does |
+|---|---|
+| `store` | Saved data |
+| `settings` | Sound, vibration, read-aloud and theme settings |
+| `whoIsPlaying()` | Asks who's playing a single-player game |
+| `playerPicker()` | The multiplayer setup's player list |
+| `pass()` | The "Pass the phone to…" screen |
+| `confirm()`, `toast()` | In-app "Are you sure?" dialog and short messages |
+| `sfx`, `buzz()` | Sound effects and vibration |
+| `themeView()`, `themeSvg()`, `buildThemePicker()` | Picture themes |
+
+Give every game screen a Home button in the top-left corner (`<button class="icon-btn" data-home aria-label="Home"></button>`). Scope the game's CSS under its own class, the way `.hm` does for Hangman.
 
 ## Adding a picture theme
 
-Copy one of the files in `js/themes/` and change it. A theme is one object:
+Copy one of the files in `shell/themes/` and change it. A theme is one object:
 
 ```js
-HM.registerTheme({
+Arcade.registerTheme({
   id: "dragon",            // unique id
   name: "Dragon",          // shown in the picker
   accent: "#c9a0ff",       // tints the board, keys and buttons
@@ -92,16 +143,21 @@ HM.registerTheme({
 
 Every theme has 8 stages, and each wrong guess adds exactly one:
 
-- **Easy** allows 8 wrong guesses and uses all 8 stages.
-- **Medium, Hard, Impossible and multiplayer** allow 6 wrong guesses and skip the theme's 2 `optional` stages. Those skipped details are never drawn in those games.
+- Easy Hangman allows 8 wrong guesses and uses all 8 stages.
+- Games that allow 6 wrong guesses skip the theme's 2 `optional` stages.
 
 Either way, the last allowed miss lands on the final stage, and the picture starts with nothing added.
 
-Then add a `<script src="js/themes/dragon.js">` tag in `index.html` (before `js/app.js`) and the path to `FILES` in `sw.js`. The game logic doesn't need to change.
+Then add a `<script src="shell/themes/dragon.js">` tag in `index.html` (before `shell/shell.js`) and the path to `SHELL_FILES` in `sw.js`.
 
-Drawing tips: use the shared chalk classes `c` (chalk line), `d` (dim line), `a` (accent line), `thin`, `fc`/`fa`/`fb` (chalk/accent/board fill) and `t` (text). For animations, make an element's normal style its **final** pose and animate *from* the start. That way people with reduced motion turned on still see the finished picture. Keep win and loss animations under 1.5 seconds.
+Drawing tips:
+- **Chalk classes:**
+  - `c` is a chalk line, `d` a dim line and `a` an accent line; `thin` makes any of them thinner.
+  - `fc`, `fa` and `fb` fill with chalk, accent or board color.
+  - `t` is chalk text.
+- **Animations:** make an element's normal style its **final** pose and animate *from* the start. That way people with reduced motion turned on still see the finished picture. Keep win and loss animations under 1.5 seconds.
 
-## Multiplayer scoring
+## Hangman multiplayer scoring
 
 - A guesser gets **+1** for each correct letter they guess, however many times it appears.
 - The guesser who reveals the last letter gets **+3** more.

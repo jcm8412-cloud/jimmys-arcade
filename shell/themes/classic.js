@@ -1,7 +1,7 @@
 /* Classic: a stick figure gains one part per wrong guess.
    Stages: 1 head, 2 eyes*, 3 body, 4 left arm, 5 right arm, 6 left leg, 7 right leg, 8 hands and feet*.
    (* optional details, skipped in 6-miss games) */
-HM.registerTheme({
+Arcade.registerTheme({
   id: "classic",
   name: "Classic",
   accent: "#f3d36b",

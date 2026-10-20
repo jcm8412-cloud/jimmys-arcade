@@ -59,7 +59,7 @@
       <g class="snow-bob">${hat(104, GROUND - 6, " rotate(8)")}</g>`;
   }
 
-  HM.registerTheme({
+  Arcade.registerTheme({
     id: "snowman",
     name: "Snowman",
     accent: "#9fd3e8",
@@ -71,7 +71,7 @@
         const flakes = [[30, 60], [70, 30], [95, 95], [160, 70], [200, 110], [215, 40], [45, 140], [180, 150], [130, 20]]
           .map(([x, y], i) => `<g class="snow-flake" style="animation-delay:${(i % 4) * .12}s"><path class="c thin" d="M${x - 5} ${y} h10 M${x} ${y - 5} v10 M${x - 3.5} ${y - 3.5} l7 7 M${x - 3.5} ${y + 3.5} l7 -7"/></g>`)
           .join("");
-        const fresh0 = HM.themeView(this, 0, 8);
+        const fresh0 = Arcade.themeView(this, 0, 8);
         return `${ground}
           <g><circle class="a fa-soft" cx="196" cy="38" r="16"/>
             <path class="a" d="M196 12 v-6 M196 64 v6 M170 38 h-6 M222 38 h6"/></g>

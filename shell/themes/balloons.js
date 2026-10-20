@@ -49,7 +49,7 @@
     return left.map(b => string(b, by)).join("") + left.map(balloon).join("") + basket(by, false, v);
   }
 
-  HM.registerTheme({
+  Arcade.registerTheme({
     id: "balloons",
     name: "Balloons",
     accent: "#f29a9a",

@@ -1,5 +1,5 @@
 /* Theme registry.
-   A theme is one object passed to HM.registerTheme():
+   A theme is one object passed to Arcade.registerTheme():
      id        unique string
      name      shown in the picker
      accent    CSS color; tints the board, keyboard and buttons
@@ -18,14 +18,14 @@
    Shared chalk classes (see style.css): .c chalk line, .d dim line, .a accent line, .thin,
    .fc chalk fill, .fa accent fill, .fb board fill, .fa-soft faint accent fill, .t chalk text,
    .draw-in fade-in for a newly added part.
-   To add a theme: drop a file in js/themes/, add its <script> tag to index.html and its path to sw.js. */
-window.HM = window.HM || {};
-HM.themes = [];
-HM.THEME_STAGES = 8;
+   To add a theme: drop a file in shell/themes/, add its <script> tag to index.html and its path to SHELL_FILES in sw.js. */
+window.Arcade = window.Arcade || {};
+Arcade.themes = [];
+Arcade.THEME_STAGES = 8;
 
-HM.registerTheme = function (theme) {
-  if (HM.themes.some(t => t.id === theme.id)) return;
-  HM.themes.push(theme);
+Arcade.registerTheme = function (theme) {
+  if (Arcade.themes.some(t => t.id === theme.id)) return;
+  Arcade.themes.push(theme);
   if (theme.css) {
     const style = document.createElement("style");
     style.dataset.theme = theme.id;
@@ -34,16 +34,16 @@ HM.registerTheme = function (theme) {
   }
 };
 
-HM.getTheme = id => HM.themes.find(t => t.id === id) || HM.themes[0];
+Arcade.getTheme = id => Arcade.themes.find(t => t.id === id) || Arcade.themes[0];
 
 /* Which stages have happened after `misses` wrong guesses in a game that allows `maxMisses`.
    Each miss adds exactly one stage. Stages the theme marks optional are skipped (in order)
    until there are exactly `maxMisses` stages. */
-HM.themeView = function (theme, misses, maxMisses) {
+Arcade.themeView = function (theme, misses, maxMisses) {
   const optional = theme.optional || [];
-  const skip = optional.slice(0, Math.max(0, HM.THEME_STAGES - maxMisses));
+  const skip = optional.slice(0, Math.max(0, Arcade.THEME_STAGES - maxMisses));
   const active = [];
-  for (let s = 1; s <= HM.THEME_STAGES; s++) if (!skip.includes(s)) active.push(s);
+  for (let s = 1; s <= Arcade.THEME_STAGES; s++) if (!skip.includes(s)) active.push(s);
   const done = active.slice(0, Math.max(0, Math.min(misses, active.length)));
   return {
     done,

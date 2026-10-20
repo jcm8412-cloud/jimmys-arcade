@@ -52,7 +52,7 @@
     return out;
   }
 
-  HM.registerTheme({
+  Arcade.registerTheme({
     id: "pumpkin",
     name: "Pumpkin",
     accent: ORANGE,

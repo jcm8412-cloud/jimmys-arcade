@@ -1,7 +1,7 @@
 {
-  "name": "Chalkboard Hangman",
-  "short_name": "Hangman",
-  "description": "A chalkboard Hangman game for kids. Plays offline.",
+  "name": "Jimmy's Arcade",
+  "short_name": "Jimmy's Arcade",
+  "description": "Chalkboard games for kids: Hangman and more. Plays offline.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

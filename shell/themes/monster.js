@@ -39,7 +39,7 @@
       <path class="d thin" d="M40 160 l6 -8 l6 8 M70 196 l6 -8 l6 8 M210 182 l6 -8 l6 8"/>`;
   }
 
-  HM.registerTheme({
+  Arcade.registerTheme({
     id: "monster",
     name: "Monster",
     accent: "#b8e986",

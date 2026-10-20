@@ -40,7 +40,7 @@
   const looseBolt = v => (v.has(3)
     ? `<g class="${v.last === 3 ? "rk-bolt" : ""}"><circle class="fc" cx="172" cy="${GROUND - 4}" r="3"/></g>` : "");
 
-  HM.registerTheme({
+  Arcade.registerTheme({
     id: "rocket",
     name: "Rocket",
     accent: "#ff8a65",
