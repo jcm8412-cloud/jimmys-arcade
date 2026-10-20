@@ -1,0 +1,167 @@
+[
+  {
+    "id": "school",
+    "title": "My Wild School Day",
+    "text": "This morning I rode a {animal} to school. My teacher, Mr. {silly word}, was wearing a curly wig and {adjective} shoes. In math class we learned to count to {number} by {verb ending in -ing}.\n\nAt lunch, the cafeteria served {food} with a side of {plural noun}. Then the fire alarm went \"{sound}!\" and everyone ran outside holding their {body part}. It was the most {adjective|end} day ever."
+  },
+  {
+    "id": "pet",
+    "title": "My Very Strange Pet",
+    "text": "I have a pet {animal} named {name of a person in the room|pet}. Every morning, {name of a person in the room|pet} eats a bowl of {food} and does {number} jumping jacks. My pet's favorite toy is a {adjective} {noun}.\n\nWhen the doorbell rings, it yells \"{exclamation}!\" and hides under the {noun|hide}. At night it sleeps on my {body part} and snores, \"{sound}!\""
+  },
+  {
+    "id": "zoo",
+    "title": "A Trip to the Zoo",
+    "text": "Last Saturday my family went to the zoo. First we saw a {adjective} {animal} {verb ending in -ing} on a rock. The zookeeper let me feed it {number} {plural noun}!\n\nNext, the monkeys threw {food} at my {body part}. The penguins were wearing tiny {color} hats. Before we left, I bought a stuffed {animal|toy} and named it {silly word}."
+  },
+  {
+    "id": "pirates",
+    "title": "Pirates Ahoy!",
+    "text": "Captain {name of a person in the room|cap} sailed the {adjective} seas on a ship called the Soggy {noun}. The crew ate {food} for breakfast, lunch, and dinner.\n\nOne day the lookout shouted, \"{exclamation}! I see a {color} island!\" They dug for {number} hours and found a chest full of {plural noun}. Captain {name of a person in the room|cap} was so happy that the whole crew did a dance called the {silly word}."
+  },
+  {
+    "id": "birthday",
+    "title": "The Best Birthday Party",
+    "text": "For my birthday, I had a party at {place}. My cake was shaped like a giant {animal} and tasted like {food}. My friends gave me {number} presents, and one of them was a {adjective} {noun}!\n\nWe played Pin the Tail on the {noun|game} and danced until my {body part} hurt. When I blew out the candles, everyone yelled, \"{exclamation}!\""
+  },
+  {
+    "id": "space",
+    "title": "Blast Off to Space",
+    "text": "Astronaut {name of a person in the room} climbed into a {color} rocket and counted down from {number}. {sound}! The rocket zoomed past the moon.\n\nOn a planet made of {food}, the astronaut met an alien with {number|eyes} eyes. The alien said, \"{silly word}!\" which means hello in Alien. They spent the day {verb ending in -ing} together, and the astronaut flew home with a {adjective} souvenir."
+  },
+  {
+    "id": "sleepover",
+    "title": "The Sleepover",
+    "text": "Last Friday I had a sleepover with {name of a person in the room}. We built a fort out of {plural noun} and {plural noun|more}. For a midnight snack we ate {food} dipped in {food|dip}.\n\nThen we told a scary story about a {adjective} {animal} that lives under the {noun}. Suddenly we heard a loud \"{sound}!\" We screamed so loud that my {body part} wiggled."
+  },
+  {
+    "id": "dentist",
+    "title": "A Visit to the Dentist",
+    "text": "Today I went to see Dr. {silly word}, the dentist. The waiting room was full of {plural noun}. The dentist looked in my mouth and said, \"{exclamation}! You have {number} teeth, and one of them is {color}!\"\n\nThe dentist cleaned my teeth with a {adjective} brush that tasted like {food}. When I left, I got a free {noun} and a sticker shaped like a {animal}."
+  },
+  {
+    "id": "dinosaur",
+    "title": "Dinosaur Day",
+    "text": "A {adjective} dinosaur stomped into my backyard. It was as tall as a {noun} and as {adjective|like} as a {animal}. It ate all my {plural noun} and then burped, \"{sound}!\"\n\nI named it {name of a person in the room}-saurus. Now we go {verb ending in -ing} together every day, and it gives the best rides on its {body part}."
+  },
+  {
+    "id": "halloween",
+    "title": "Halloween Night",
+    "text": "On Halloween I dressed up as a {adjective} {animal}. My best friend went as a giant {food}. We knocked on {number} doors and said, \"Trick or {silly word}!\"\n\nOne house was guarded by a ghost that went \"{sound}!\" We ran away so fast that I lost my {noun}. At home I counted my candy: {number|candy} pieces and one {color} jelly bean."
+  },
+  {
+    "id": "snowday",
+    "title": "Snow Day!",
+    "text": "School was closed because it snowed {number} feet! I put on my {color} boots and ran outside. I built a snowman with a {food} for a nose and two {plural noun} for eyes.\n\nThen my dog, {silly word}, jumped into a snowbank and came out looking like a {adjective} {animal}. We had a snowball fight until my {body part} was frozen. Hot cocoa with {plural noun|cocoa} made it all better."
+  },
+  {
+    "id": "superhero",
+    "title": "The Amazing Captain {silly word|hero}",
+    "text": "Captain {silly word|hero} could fly faster than a {noun} and lift {number} {plural noun} with one {body part}. Their only weakness was {food}.\n\nOne day a villain named Doctor {adjective} {animal} tried to steal every crayon in town. Captain {silly word|hero} shouted, \"{exclamation}!\" and saved the day by {verb ending in -ing}."
+  },
+  {
+    "id": "beach",
+    "title": "A Day at the Beach",
+    "text": "We packed our {adjective} beach bag with sunscreen, a towel, and {number} {plural noun}. At the beach, I built a sandcastle shaped like a {animal}.\n\nA seagull stole my {food} sandwich and squawked, \"{sound}!\" Then a wave knocked me over, and I came up with seaweed on my {body part}. Dad said, \"{exclamation}!\" and we laughed all the way home."
+  },
+  {
+    "id": "camping",
+    "title": "The Camping Trip",
+    "text": "We set up our tent next to a {adjective} lake. For dinner we roasted {plural noun} over the campfire. That night we heard something {verb ending in -ing} outside the tent!\n\nI peeked out and saw a {color} {animal} wearing my {noun}. It said, \"{silly word}!\" and ran into the woods. In the morning my sleeping bag smelled like {food}."
+  },
+  {
+    "id": "robot",
+    "title": "My Robot Friend",
+    "text": "I built a robot out of {plural noun} and an old {noun}. I named it {name of a person in the room}-Bot 3000. It can {verb} faster than a {animal}, and it beeps \"{sound}\" when it's happy.\n\nThe only problem is that it only eats {food}. Yesterday it cleaned my whole room in {number} seconds, but it put all my socks on its {body part}."
+  },
+  {
+    "id": "sciencefair",
+    "title": "The Science Fair",
+    "text": "For the science fair, I tried to find out what happens when you mix {food} with {plural noun}. I wore {color} goggles and a {adjective} lab coat.\n\nI stirred it {number} times and then... {sound}! The mixture turned into a tiny {animal}! The judges said, \"{exclamation}!\" and gave me a blue ribbon."
+  },
+  {
+    "id": "farm",
+    "title": "Down on the Farm",
+    "text": "Farmer {name of a person in the room} has a very {adjective} farm. The cows say \"{sound}\" and the chickens lay {color} eggs. Every morning the farmer feeds the pigs a big bucket of {food}.\n\nIn the barn lives a {animal} who thinks it's a horse. Its favorite thing is {verb ending in -ing} in the mud. At harvest time, the farmer grows {number} pumpkins as big as {plural noun}."
+  },
+  {
+    "id": "dragon",
+    "title": "My Pet Dragon",
+    "text": "I found a {color} egg at {place}. It hatched into a baby dragon! Instead of fire, it breathes {plural noun}.\n\nI feed it {food} every day, and now it is as big as a {noun}. When it is happy, it wiggles its {body part} and says, \"{silly word}!\" Tomorrow I'm going to ride it all the way to {place|trip}."
+  },
+  {
+    "id": "cooking",
+    "title": "The Cooking Contest",
+    "text": "I entered the town cooking contest with my famous {food} soup. The secret ingredient is {number} {plural noun}. I stirred it with my {body part} (don't tell anyone).\n\nThe judge, Chef {silly word}, took one sip and turned {color}! Then the chef shouted, \"{exclamation}! This is the most {adjective} soup ever!\" I won a trophy shaped like a {animal}."
+  },
+  {
+    "id": "talentshow",
+    "title": "The Talent Show",
+    "text": "At the school talent show, I sang a song about a {adjective} {animal}. While I sang, my friend {name of a person in the room} juggled {number} {plural noun}.\n\nThen our teacher came on stage and started {verb ending in -ing}! The crowd went \"{sound}!\" and threw {food} on the stage. We won second place, right after a kid who could wiggle their {body part}."
+  },
+  {
+    "id": "soccer",
+    "title": "The Big Soccer Game",
+    "text": "Our soccer team, the {adjective} {plural noun}, played the championship game today. The other team's goalie was a {animal}! I kicked the ball so hard it flew all the way to {place}.\n\nThe referee blew the whistle ({sound}!) and gave everyone {food} at halftime. We won {number} to nothing, and the coach did a happy dance on one {body part}."
+  },
+  {
+    "id": "library",
+    "title": "The Library Mystery",
+    "text": "At the library, all the books started {verb ending in -ing}! The librarian, Ms. {silly word}, whispered, \"{exclamation}!\" A book about {plural noun} flew off the shelf and landed on my {body part}.\n\nInside the book was a map to {place}. We followed it and found a {adjective} {animal} reading a book about {food}."
+  },
+  {
+    "id": "rainyday",
+    "title": "A Rainy Day",
+    "text": "It rained so much today that the street turned into a river of {food}. I put on my {color} raincoat and jumped in {number} puddles.\n\nA {adjective} {animal} floated by in a boat made of {plural noun}. It waved its {body part} and shouted, \"{exclamation}!\" When the sun came out, there was a rainbow that smelled like {food|rainbow}."
+  },
+  {
+    "id": "sea",
+    "title": "Under the Sea",
+    "text": "I put on my {adjective} scuba mask and dove under the sea. A friendly octopus waved {number} arms at me. A {color} fish showed me its treasure: a pile of {plural noun}.\n\nThen a shark swam by {verb ending in -ing}! I hid behind a {noun} until it was gone. Back on the boat, I found a tiny {animal} hiding on my {body part}."
+  },
+  {
+    "id": "circus",
+    "title": "The Circus Comes to Town",
+    "text": "The circus came to town with {number} clowns in one tiny car. The ringmaster, {name of a person in the room}, wore a {adjective} top hat.\n\nA {animal} walked on a tightrope while balancing {plural noun} on its {body part}. Then the strongman lifted a giant {noun} and yelled, \"{exclamation}!\" I ate so much {food} that I almost floated away."
+  },
+  {
+    "id": "roadtrip",
+    "title": "The Family Road Trip",
+    "text": "We drove {number} miles to see the world's biggest {noun|big}. My little brother sang the {silly word} song the whole way. We stopped for lunch at a diner that only serves {food}.\n\nDad got lost, and we ended up at {place} full of {plural noun}. When we finally saw the giant {noun|big}, everyone said, \"{exclamation}!\" It was so {adjective}."
+  },
+  {
+    "id": "castle",
+    "title": "The King and Queen",
+    "text": "Long ago, in a {adjective} castle, there lived a king who loved {food} and a queen who collected {plural noun}. Their royal pet was a {color} {animal} named Sir {silly word}.\n\nEvery day at noon, the king shouted, \"{exclamation}!\" and everyone in the castle had to {verb} for {number} minutes. It was the silliest kingdom in {place}."
+  },
+  {
+    "id": "bakery",
+    "title": "The Bakery",
+    "text": "I opened a bakery called {name of a person in the room}'s {adjective} Treats. My best seller is a cupcake made with {food} and {plural noun}.\n\nOne day a {animal} came in and ordered {number} donuts. It paid with a {color} {noun}! Then I baked a cake so tall it touched the {noun|tall}, and it went \"{sound}!\" when I cut it."
+  },
+  {
+    "id": "gym",
+    "title": "Gym Class",
+    "text": "In gym class today we played dodgeball with {plural noun}. Coach {silly word} blew the whistle ({sound}!) and made us run {number} laps around {place}.\n\nThen we had to climb a rope covered in {food}. I made it to the top and yelled, \"{exclamation}!\" My {body part} is still {adjective}."
+  },
+  {
+    "id": "lostsock",
+    "title": "The Case of the Missing Sock",
+    "text": "Detective {name of a person in the room} was hired to find a missing {color} sock. The first clue was a trail of {food} crumbs. The trail led to {place}, where a {adjective} {animal|thief} was {verb ending in -ing}.\n\n\"{exclamation}!\" said the detective. The {animal|thief} wasn't wearing the sock... it was using it as a {noun}!"
+  },
+  {
+    "id": "treehouse",
+    "title": "The Treehouse Club",
+    "text": "My friends and I built a treehouse out of {plural noun} and {number} rolls of tape. The secret password is \"{silly word}.\" Only kids with {color} shoes are allowed inside.\n\nOur club snack is {food}, and our mascot is a {adjective} {animal}. To do the secret handshake, you have to wiggle your {body part}."
+  },
+  {
+    "id": "grandma",
+    "title": "Visiting Grandma",
+    "text": "Every summer we visit Grandma, who lives in a {adjective} house near {place}. Grandma makes the best {food} pie in the world. She has {number} cats and a parrot that only says \"{silly word}.\"\n\nGrandma taught me how to knit a {noun} for my {body part}. When we leave, she always says, \"{exclamation}!\" and gives me {plural noun} for the road."
+  },
+  {
+    "id": "timemachine",
+    "title": "The Time Machine",
+    "text": "I built a time machine out of a {noun} and some {plural noun}. I pushed the {color} button and... {sound}! I was {number} years in the past.\n\nA knight riding a {animal} asked me for some {food}. I taught everyone in the village how to {verb}, and they made me the king of {place}!"
+  }
+]

@@ -192,7 +192,9 @@
     for (const entry of A.GAME_LIST) {
       loadingFolder = entry.folder;
       try {
-        for (const f of entry.files) await loadFile(`games/${entry.folder}/${f}`);
+        for (const f of entry.files) {
+          if (/\.(js|css)$/.test(f)) await loadFile(`games/${entry.folder}/${f}`);
+        }
       } catch (e) { console.error(e); }
     }
     loadingFolder = null;

@@ -5,7 +5,10 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Hangman:**
   - Single player has four levels: Easy, Medium, Hard and Impossible ("evil hangman").
   - Multiplayer is pass-and-play: a Word Master picks the word and everyone else guesses.
-- **Silly Stories, Connect Four, Tic-Tac-Toe:** coming soon.
+- **Silly Stories:** fill in words without seeing the story, then reveal it and have it read aloud.
+  - Play solo, or pass-and-play for 2–6 players.
+  - Save favorites to reread later.
+- **Connect Four, Tic-Tac-Toe:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -73,6 +76,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `shell/style.css` | Chalkboard look and shared components |
 | `games/index.js` | The list of games, one line each |
 | `games/hangman/` | Hangman: rules (`engine.js`), word lists, screens (`game.js`) and styles |
+| `games/silly-stories/` | Silly Stories: screens (`game.js`), story templates (`stories.json`), word types and ideas (`words.js`) |
 | `games/*/game.js` | Coming-soon placeholders for the other games |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
@@ -85,6 +89,9 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `hangman:stats`: per-player wins and streaks
 - `hangman:mp`: a multiplayer game in progress
 - `hangman:lastWords` and `hangman:lastSetup`
+- `silly-stories:favorites`: up to 50 saved stories
+- `silly-stories:stats`: stories made per player
+- `silly-stories:recent` and `silly-stories:lastSetup`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -156,6 +163,24 @@ Drawing tips:
   - `fc`, `fa` and `fb` fill with chalk, accent or board color.
   - `t` is chalk text.
 - **Animations:** make an element's normal style its **final** pose and animate *from* the start. That way people with reduced motion turned on still see the finished picture. Keep win and loss animations under 1.5 seconds.
+
+## Adding a Silly Stories template
+
+Add an object to `games/silly-stories/stories.json`:
+
+```json
+{
+  "id": "museum",
+  "title": "A Night at the Museum",
+  "text": "Our class visited a museum full of {plural noun}. A {adjective} statue of {name of a person in the room|guide} waved at us..."
+}
+```
+
+- `{type}` is a blank. The type must be one of the types in `words.js`, which hold each type's explanation and "Give me an idea" suggestions.
+- `{type|key}` reuses one answer everywhere the same key appears, like a hero's name used three times.
+- Aim for 6–10 words to fill in.
+- "a" becomes "an" before a vowel automatically, and words at the start of a sentence are capitalized.
+- Bump `CACHE` in `sw.js` so installed copies get the new story.
 
 ## Hangman multiplayer scoring
 

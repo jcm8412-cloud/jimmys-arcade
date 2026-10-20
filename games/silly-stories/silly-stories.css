@@ -1,0 +1,53 @@
+/* Silly Stories' own styles, scoped under .ss (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.ss.menu { gap: 16px; }
+.ss .title { font-size: clamp(2.8rem, 13vw, 4.2rem); line-height: .95; text-align: center; }
+.ss .title span { color: var(--accent); }
+.ss .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.ss .menu-buttons { display: grid; gap: 12px; }
+
+/* ---------- Filling in a word ---------- */
+.ss.fill { gap: 12px; }
+.ss .tb-right .avatar { width: 40px; height: 40px; }
+.ss .dots { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.ss .dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(242,240,230,.4); }
+.ss .dots i.done { background: var(--accent); border-color: var(--accent); }
+.ss .dots i.now { border-color: var(--accent); transform: scale(1.25); }
+.ss .ask { text-align: center; margin-top: 4px; }
+.ss .type { margin: 0; font-family: var(--font-display); font-size: clamp(2.2rem, 11vw, 3.2rem); line-height: 1.05; color: var(--accent); overflow-wrap: anywhere; }
+.ss .explain { margin: 6px 0 0; font-size: 1.3rem; }
+.ss .explain em { font-style: normal; font-family: var(--font-display); color: var(--chalk); border-bottom: 2px dashed rgba(242,240,230,.4); }
+.ss .word-input { font-size: 1.6rem; min-height: 60px; text-align: center; font-family: var(--font-display); }
+.ss .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ss .chips:empty { display: none; }
+.ss .chip {
+  min-height: 44px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(0,0,0,.18); border: 2px solid rgba(242,240,230,.4); font-size: 1.1rem;
+}
+.ss .fill-nav { display: flex; gap: 10px; margin-top: auto; }
+.ss .fill-nav .btn.big { flex: 1; }
+.ss .fill-nav .btn.ghost { flex: none; min-width: 96px; }
+
+/* ---------- The story ---------- */
+.ss .story { font-size: 1.3rem; line-height: 1.55; }
+.ss .story p { margin: 0 0 12px; }
+.ss .story-title { font-size: 2rem; line-height: 1.15; text-align: center; margin: 0 0 12px; }
+.ss .ss-word {
+  background: none; color: var(--accent); font-family: var(--font-display); font-size: 1.15em;
+  border-bottom: 2px dashed var(--accent); padding: 0 2px; white-space: nowrap;
+}
+.ss .ss-by .avatar { width: 22px; height: 22px; vertical-align: -3px; margin-left: 2px; }
+.ss .story-title .ss-word { font-size: 1em; }
+.ss.reveal .btn.read { background: var(--accent); font-family: var(--font-display); font-size: 1.5rem; min-height: 56px; }
+.ss .btn:disabled { opacity: .7; cursor: default; }
+
+/* ---------- Favorites ---------- */
+.ss .fav-list { display: grid; gap: 8px; }
+.ss .fav-item {
+  display: grid; gap: 2px; text-align: left; padding: 10px 14px; min-height: 60px; cursor: pointer;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.35); border-radius: 12px;
+}
+.ss .fav-title { font-family: var(--font-display); font-size: 1.4rem; color: var(--accent); overflow-wrap: anywhere; }
+.ss .fav-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: .95rem; color: var(--chalk-dim); }
+.ss .fav-meta .avatar { width: 24px; height: 24px; }
