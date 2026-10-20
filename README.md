@@ -10,7 +10,9 @@ A collection of chalkboard games for kids that plays like an app on phones and t
   - Save favorites to reread later.
 - **Connect Four:** play the computer at four levels, or two players on one phone.
   - Undo is unlimited on Easy, 3 per game on Medium, and off on Hard and Impossible.
-- **Tic-Tac-Toe:** coming soon.
+- **Tic-Tac-Toe:** play the computer at four levels, or two players on one phone.
+  - Choose X or O, and play one game, best of 3 or best of 5.
+  - Impossible never loses, so tying it is the bragging right.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -80,7 +82,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/hangman/` | Hangman: rules (`engine.js`), word lists, screens (`game.js`) and styles |
 | `games/silly-stories/` | Silly Stories: screens (`game.js`), story templates (`stories.json`), word types and ideas (`words.js`) |
 | `games/connect-four/` | Connect Four: rules and computer players (`ai.js`), screens (`game.js`) |
-| `games/*/game.js` | Coming-soon placeholder for Tic-Tac-Toe |
+| `games/tic-tac-toe/` | Tic-Tac-Toe: rules and computer players (`ai.js`), screens (`game.js`) |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -97,6 +99,9 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `silly-stories:recent` and `silly-stories:lastSetup`
 - `connect-four:stats`: for each player, wins, losses and ties against each computer level and against each other player
 - `connect-four:lastSetup`
+- `tic-tac-toe:stats`: same shape as Connect Four's
+- `tic-tac-toe:prefs`: X or O and match length
+- `tic-tac-toe:lastSetup`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -202,6 +207,22 @@ How Impossible gets its strength:
 - **Endgame threat rule:** it favours positions where its "almost four" threats sit on the right rows. The player who moved first wants them on odd rows, the second player on even rows.
 
 With the short pause before it moves, the computer always answers in under a second.
+
+## Tic-Tac-Toe rules
+
+- You pick X or O for the first game. After that, players swap letters every game, so X always goes first and the first move alternates.
+- Matches are one game, best of 3 or best of 5:
+  - Ties count as games played.
+  - A match ends early once the leader can't be caught.
+  - If wins are level after the last game, the match is a tie.
+- The computer levels:
+
+| Level | How it plays |
+|---|---|
+| Easy | Random moves |
+| Medium | Wins or blocks when it can, otherwise random |
+| Hard | Perfect play 70% of the time, random otherwise |
+| Impossible | Perfect play (full minimax), so it never loses. Tested against every possible game. |
 
 ## Hangman multiplayer scoring
 
