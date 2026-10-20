@@ -1,7 +1,7 @@
 /* Service worker: caches the shell and every game so the arcade plays offline.
    Game files come from games/index.js, so adding a game doesn't mean editing this file.
    Bump CACHE whenever any file changes, so installed copies pick up the new version. */
-const CACHE = "jimmys-arcade-v6";
+const CACHE = "jimmys-arcade-v7";
 const SHELL_FILES = [
   "./",
   "index.html",
@@ -37,7 +37,8 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      // Only remove this app's old versions; other apps on the same site keep their caches.
+      .then(keys => Promise.all(keys.filter(k => k.startsWith("jimmys-arcade-") && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
