@@ -13,6 +13,9 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Tic-Tac-Toe:** play the computer at four levels, or two players on one phone.
   - Choose X or O, and play one game, best of 3 or best of 5.
   - Impossible never loses, so tying it is the bragging right.
+- **Dots and Boxes:** play the computer at four levels, or pass-and-play for 2–4 players.
+  - Four board sizes, from Small 3×3 to Huge 6×6.
+  - A game in progress is saved and resumed.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -83,6 +86,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/silly-stories/` | Silly Stories: screens (`game.js`), story templates (`stories.json`), word types and ideas (`words.js`) |
 | `games/connect-four/` | Connect Four: rules and computer players (`ai.js`), screens (`game.js`) |
 | `games/tic-tac-toe/` | Tic-Tac-Toe: rules and computer players (`ai.js`), screens (`game.js`) |
+| `games/dots-and-boxes/` | Dots and Boxes: rules, chain analysis and computer players (`engine.js`), screens (`game.js`) |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -102,6 +106,9 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `tic-tac-toe:stats`: same shape as Connect Four's
 - `tic-tac-toe:prefs`: X or O and match length
 - `tic-tac-toe:lastSetup`
+- `dots-and-boxes:game`: the game in progress, saved after every line
+- `dots-and-boxes:stats`: for each player, wins, losses and ties against each level on each board size, pass-and-play wins, and most boxes in one game per board size
+- `dots-and-boxes:prefs`, `dots-and-boxes:rotation` (who starts next) and `dots-and-boxes:lastSetup`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -223,6 +230,27 @@ With the short pause before it moves, the computer always answers in under a sec
 | Medium | Wins or blocks when it can, otherwise random |
 | Hard | Perfect play 70% of the time, random otherwise |
 | Impossible | Perfect play (full minimax), so it never loses. Tested against every possible game. |
+
+## Dots and Boxes rules
+
+- Players take turns drawing a line between two neighbouring dots.
+- Drawing the fourth side of a box claims it and gives you another turn. Two boxes with one line still gives one extra turn.
+- When every box is claimed, the most boxes wins. Equal top scores is a tie.
+- Who goes first rotates each new game.
+
+Undo against the computer is unlimited on Easy, 3 per game on Medium, and off on Hard and Impossible. It goes back to before your last line.
+
+| Level | How it plays |
+|---|---|
+| Easy | Random lines, and takes a free box only about half the time. "Show safe moves" can mark the lines that don't give a box away. |
+| Medium | Always takes free boxes; otherwise avoids drawing a box's third side when it can |
+| Hard | Medium, plus when no safe lines are left it opens the smallest chain or loop |
+| Impossible | Hard, plus chain control (details below). Stays within 350 ms per line. |
+
+Impossible's chain control:
+- **Endgame solver:** once no safe lines are left, it works out the exact best play for any shape of chains, loops and junctions.
+- **Double-cross:** it declines the last 2 boxes of a chain, or the last 4 of a loop, when that keeps control.
+- **Late safe moves:** it searches the last safe lines so that you're the one who has to open the first chain.
 
 ## Hangman multiplayer scoring
 

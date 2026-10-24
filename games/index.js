@@ -8,5 +8,6 @@
   { folder: "hangman", files: ["hangman.css", "words.js", "impossible-words.js", "engine.js", "game.js"] },
   { folder: "silly-stories", files: ["silly-stories.css", "words.js", "stories.json", "game.js"] },
   { folder: "connect-four", files: ["connect-four.css", "ai.js", "game.js"] },
-  { folder: "tic-tac-toe", files: ["tic-tac-toe.css", "ai.js", "game.js"] }
+  { folder: "tic-tac-toe", files: ["tic-tac-toe.css", "ai.js", "game.js"] },
+  { folder: "dots-and-boxes", files: ["dots-and-boxes.css", "engine.js", "game.js"] }
 ];
