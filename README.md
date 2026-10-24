@@ -17,7 +17,10 @@ A collection of chalkboard games for kids that plays like an app on phones and t
   - Four board sizes, from Small 3×3 to Huge 6×6.
   - A game in progress is saved and resumed.
 - **Chalk Snake:** classic Snake with power-up foods, a 2-player battle on one phone, and the daily twist.
-- **Pong Party, Brick Bash, Critter Crossing, Galaxy Defenders:** coming soon.
+- **Pong Party:** Pong with weird balls and power-ups.
+  - Play the computer at four levels, or 2 players with the device flat between you.
+  - 4 players on a tablet.
+- **Brick Bash, Critter Crossing, Galaxy Defenders:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -91,7 +94,8 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/dots-and-boxes/` | Dots and Boxes: rules, chain analysis and computer players (`engine.js`), screens (`game.js`) |
 | `shell/action.js`, `shell/action.css` | Shared kit for the action games: canvas loop, pause, countdown, swipes, high scores, daily twist |
 | `games/chalk-snake/` | Chalk Snake |
-| `games/pong-party/`, `brick-bash/`, `critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
+| `games/pong-party/` | Pong Party |
+| `games/brick-bash/`, `critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -120,6 +124,9 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `chalk-snake:battle`: battle wins per player
 - `chalk-snake:prefs`: arrow pad on or off for each level, plus the last battle settings
 - `chalk-snake:lastSetup`
+- `pong-party:record`: wins and losses against each computer level, per player
+- `pong-party:wins`: 2- and 4-player match wins per player
+- `pong-party:lastSetup2` and `pong-party:lastSetup4`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -306,6 +313,37 @@ Impossible's chain control:
   - A head-on crash replays the round.
 - **Daily twists:** runaway apples, a shrinking board, speedy apples, or portals. The twist plays at Medium settings with its own top 5 for the day.
 - **Look:** the snake follows the picture theme: a pumpkin-headed snake, a snowball snake, balloon segments, and so on.
+
+## Pong Party
+
+- **Modes:**
+  - Vs computer: you at the bottom.
+  - 2 players: the device lies flat, and each player drags anywhere on their own half.
+  - 4 players: tablets only, and the button is hidden on phones. Players sit bottom, top, left and right, and each has 3 lives. A player who's out becomes a wall, and the last one in wins.
+- **Matches:** first to 7 points.
+- **Controls:** multi-touch, so everyone plays at once. On a keyboard, the arrows move the bottom paddle and A/D the top one.
+- **Computer levels:** the ball speeds up level by level, and the computer gets quicker and aims better:
+
+| Level | How it plays |
+|---|---|
+| Easy | Slow ball, slow computer that misses about half its shots, and your paddle is longer |
+| Medium | A fair match: the computer misses about 1 in 5 |
+| Hard | Quick ball, sharper computer |
+| Impossible | Very fast and very good, but it still misses now and then |
+
+- **Weird balls:** about one point in three:
+  - Splitter: splits into three on its first paddle hit.
+  - Curveball: bends in an arc.
+  - Speedster: 12% faster with every hit.
+  - Ghost: invisible in the middle of the court.
+- **Power-ups:** they float in the middle, and the last player to hit the ball collects them:
+  - Big paddle (your own) or tiny paddles (everyone else's).
+  - Shield: blocks one goal.
+  - Freeze: everyone else's paddles slow down for 3 seconds.
+  - Each lasts about 8 seconds, with a timer next to the paddle.
+- **High score:** the longest rally (paddle hits in one point) against the computer, per player and level, with a household top 5. Wins and losses are kept too.
+- **Daily twists:** two balls at once, shrinking paddles, or bumpers in the middle. The twist plays against the computer at Medium.
+- **Look:** paddles follow the picture theme: a snowman paddle, a balloon paddle, a pumpkin paddle and so on, each outlined in its player's color.
 
 ## Hangman multiplayer scoring
 
