@@ -16,6 +16,8 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Dots and Boxes:** play the computer at four levels, or pass-and-play for 2–4 players.
   - Four board sizes, from Small 3×3 to Huge 6×6.
   - A game in progress is saved and resumed.
+- **Chalk Snake:** classic Snake with power-up foods, a 2-player battle on one phone, and the daily twist.
+- **Pong Party, Brick Bash, Critter Crossing, Galaxy Defenders:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -87,6 +89,9 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/connect-four/` | Connect Four: rules and computer players (`ai.js`), screens (`game.js`) |
 | `games/tic-tac-toe/` | Tic-Tac-Toe: rules and computer players (`ai.js`), screens (`game.js`) |
 | `games/dots-and-boxes/` | Dots and Boxes: rules, chain analysis and computer players (`engine.js`), screens (`game.js`) |
+| `shell/action.js`, `shell/action.css` | Shared kit for the action games: canvas loop, pause, countdown, swipes, high scores, daily twist |
+| `games/chalk-snake/` | Chalk Snake |
+| `games/pong-party/`, `brick-bash/`, `critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -109,6 +114,12 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `dots-and-boxes:game`: the game in progress, saved after every line
 - `dots-and-boxes:stats`: for each player, wins, losses and ties against each level on each board size, pass-and-play wins, and most boxes in one game per board size
 - `dots-and-boxes:prefs`, `dots-and-boxes:rotation` (who starts next) and `dots-and-boxes:lastSetup`
+- `action:best`: action-game personal bests (game → level → player)
+- `action:top`: each action game's household top 5 for each level
+- `action:daily`: today's daily-twist top 5 (older days are dropped)
+- `chalk-snake:battle`: battle wins per player
+- `chalk-snake:prefs`: arrow pad on or off for each level, plus the last battle settings
+- `chalk-snake:lastSetup`
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -251,6 +262,50 @@ Impossible's chain control:
 - **Endgame solver:** once no safe lines are left, it works out the exact best play for any shape of chains, loops and junctions.
 - **Double-cross:** it declines the last 2 boxes of a chain, or the last 4 of a loop, when that keeps control.
 - **Late safe moves:** it searches the last safe lines so that you're the one who has to open the first chain.
+
+## Action games (6–10): the shared kit
+
+`shell/action.js` gives every action game the same building blocks through `Arcade.Action`:
+
+- **`createScreen({ id, cls, onRestart, onQuit, onResize })`:** the play screen.
+  - Home sits top-left, the HUD in the middle and Pause top-right, with the canvas below.
+  - The canvas is sized to the screen and kept sharp on high-resolution displays.
+  - `start(update, render)` shows a 3-2-1 countdown, then runs `update(dt)` exactly 60 times per second of game time (the same speed on every device) and `render(alpha)` every frame.
+  - The game pauses itself when the app goes to the background, with a Paused screen offering Resume, Restart and Home. Escape or P also pauses.
+  - Page scrolling and zooming are blocked during play.
+  - It also provides `message()`, `burst("New best!")` and `showPanel()`. A panel's `split` option rotates the top half to face a player across the table.
+- **`swipes(element, { onSwipe, onTap })`:** swipe directions, re-armed during a long drag.
+- **`scores`:** personal bests per player, game and level, plus a household top 5 per game and level and a separate top 5 for today's daily twist. Guests aren't saved.
+- **`daily()`:** today's daily twist, worked out from the date so every device agrees. Only built action games take part: a game joins by listing `twists` when it registers. Its home tile shows a "Daily twist" badge through the optional `badge()` hook.
+- **`chalkLine()`, `dust()`:** light chalk drawing and dust particles.
+
+## Chalk Snake
+
+| Level | Speed | Walls | Lives | Round |
+|---|---|---|---|---|
+| Easy | Slow | Wrap around | 3 | 2 minutes |
+| Medium | Normal | Solid | 2 | 2 minutes |
+| Hard | Fast | Solid | 1 | Until you crash |
+| Impossible | Faster, speeding up as you grow | Solid | 1 | Until you crash |
+
+- **Controls:** swipe anywhere, or use the arrow keys. A swipe straight back into yourself is ignored.
+- **Arrow pad:** can be switched on for each level on the level screen. It starts on for Easy.
+- **Foods:** apples appear all the time. Every so often a special food appears for 6 seconds:
+
+| Food | Effect |
+|---|---|
+| Golden apple | +5 points and a 5-second slowdown |
+| Chili pepper | 5-second speed burst with double points |
+| Ghost pepper | Pass through your own tail for 5 seconds |
+| Scissors | Tail 3 shorter |
+
+- **Battle:**
+  - Two players, with the phone flat between them.
+  - Each player swipes on their own half, with directions from their side of the table. On a keyboard, the arrows steer one snake and WASD the other.
+  - Pick a level (for speed and walls) and best of 3 or 5.
+  - A head-on crash replays the round.
+- **Daily twists:** runaway apples, a shrinking board, speedy apples, or portals. The twist plays at Medium settings with its own top 5 for the day.
+- **Look:** the snake follows the picture theme: a pumpkin-headed snake, a snowball snake, balloon segments, and so on.
 
 ## Hangman multiplayer scoring
 

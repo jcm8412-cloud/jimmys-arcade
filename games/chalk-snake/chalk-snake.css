@@ -1,0 +1,54 @@
+/* Chalk Snake's own styles, scoped under .cs (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.cs.menu { gap: 14px; }
+.cs .title { font-size: clamp(2.8rem, 13vw, 4.2rem); line-height: .95; text-align: center; }
+.cs .title span { color: var(--accent); }
+.cs .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.cs .menu-buttons { display: grid; gap: 12px; }
+.cs .btn.daily { display: grid; place-items: center; line-height: 1.05; background: var(--yellow); }
+.cs .btn.daily small { font-family: var(--font-body); font-size: 1rem; }
+.cs .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.cs .playing-as .avatar { width: 40px; height: 40px; }
+.cs .playing-as b { font-weight: 400; color: var(--accent); }
+.cs .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.cs .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+
+.cs .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.cs .seg button {
+  min-height: 44px; padding: 4px 2px; cursor: pointer; font-size: 1rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 10px;
+}
+.cs .seg button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+
+/* Level cards: start button plus an arrow-pad switch remembered per level */
+.cs .levels { display: grid; gap: 10px; }
+.cs .level-card { display: grid; grid-template-columns: 1fr; border: 2px solid rgba(242,240,230,.4); border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.14); }
+.cs .level-card .level {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px;
+  text-align: left; padding: 10px 14px; min-height: 64px; background: none; border: none; cursor: pointer;
+}
+.cs .level-card .level b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; color: var(--accent); }
+.cs .level-card .level small { grid-column: 1; font-size: 1rem; color: var(--chalk-dim); }
+.cs .level-card .best { grid-column: 2; grid-row: 1 / span 2; text-align: center; font-size: .85rem; color: var(--chalk-dim); line-height: 1.1; }
+.cs .level-card .best span { font-family: var(--font-display); font-size: 1.6rem; color: var(--chalk); }
+.cs .level-card.impossible .level b { color: var(--pink); }
+.cs .pad-chip {
+  min-height: 44px; border: none; border-top: 2px dashed rgba(242,240,230,.2); background: rgba(0,0,0,.1);
+  cursor: pointer; font-size: 1rem; color: var(--chalk-dim);
+}
+.cs .pad-chip[aria-pressed="true"] { color: var(--accent); }
+
+/* ---------- Play ---------- */
+.cs .act-hud .twist { font-size: .95rem; color: var(--yellow); overflow: hidden; text-overflow: ellipsis; }
+.cs .pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 6px; justify-content: center; padding-top: 2px; }
+.cs .pad button {
+  font-size: 1.6rem; border-radius: 14px; cursor: pointer; touch-action: none;
+  background: rgba(255,255,255,.07); border: 2px solid rgba(242,240,230,.5); color: var(--chalk);
+}
+.cs .pad button:active { background: rgba(255,255,255,.2); }
+.cs .pad [data-dir="up"] { grid-column: 2; grid-row: 1; }
+.cs .pad [data-dir="left"] { grid-column: 1; grid-row: 2; }
+.cs .pad [data-dir="down"] { grid-column: 2; grid-row: 2; }
+.cs .pad [data-dir="right"] { grid-column: 3; grid-row: 2; }
+@media (max-height: 640px) { .cs .pad { grid-template-rows: repeat(2, 48px); } }

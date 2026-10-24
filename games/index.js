@@ -9,5 +9,10 @@
   { folder: "silly-stories", files: ["silly-stories.css", "words.js", "stories.json", "game.js"] },
   { folder: "connect-four", files: ["connect-four.css", "ai.js", "game.js"] },
   { folder: "tic-tac-toe", files: ["tic-tac-toe.css", "ai.js", "game.js"] },
-  { folder: "dots-and-boxes", files: ["dots-and-boxes.css", "engine.js", "game.js"] }
+  { folder: "dots-and-boxes", files: ["dots-and-boxes.css", "engine.js", "game.js"] },
+  { folder: "chalk-snake", files: ["chalk-snake.css", "game.js"] },
+  { folder: "pong-party", files: ["game.js"] },
+  { folder: "brick-bash", files: ["game.js"] },
+  { folder: "critter-crossing", files: ["game.js"] },
+  { folder: "galaxy-defenders", files: ["game.js"] }
 ];

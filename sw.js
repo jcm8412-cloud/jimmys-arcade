@@ -1,7 +1,7 @@
 /* Service worker: caches the shell and every game so the arcade plays offline.
    Game files come from games/index.js, so adding a game doesn't mean editing this file.
    Bump CACHE whenever any file changes, so installed copies pick up the new version. */
-const CACHE = "jimmys-arcade-v9";
+const CACHE = "jimmys-arcade-v10";
 const SHELL_FILES = [
   "./",
   "index.html",
@@ -12,6 +12,8 @@ const SHELL_FILES = [
   "icons/icon-512.png",
   "icons/apple-touch-icon.png",
   "shell/style.css",
+  "shell/action.css",
+  "shell/action.js",
   "shell/storage.js",
   "shell/avatars.js",
   "shell/shell.js",

@@ -210,9 +210,11 @@
       b.className = "tile" + (g.comingSoon ? " soon" : "");
       b.style.setProperty("--tile", g.accent);
       const stat = g.comingSoon ? "Coming soon" : (g.tileStat && lastId ? g.tileStat(lastId) : null) || "Tap to play";
-      b.innerHTML = `<svg class="tile-icon" viewBox="0 0 48 48" aria-hidden="true">${g.icon}</svg>
+      // Optional badge (the action games' "Daily twist").
+      const badge = !g.comingSoon && g.badge ? g.badge() : null;
+      b.innerHTML = `${badge ? `<span class="tile-badge">${esc(badge)}</span>` : ""}<svg class="tile-icon" viewBox="0 0 48 48" aria-hidden="true">${g.icon}</svg>
         <span class="tile-name">${esc(g.name)}</span><span class="tile-stat">${esc(stat)}</span>`;
-      b.setAttribute("aria-label", `${g.name}. ${stat}`);
+      b.setAttribute("aria-label", `${g.name}. ${badge ? badge + ". " : ""}${stat}`);
       b.addEventListener("click", () => {
         if (g.comingSoon) { A.toast(`${g.name} is coming soon!`); return; }
         A.setAccent(g.accent);
