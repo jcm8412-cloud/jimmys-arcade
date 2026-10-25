@@ -22,7 +22,7 @@ A collection of chalkboard games for kids that plays like an app on phones and t
   - 4 players on a tablet.
 - **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
 - **Critter Crossing:** hop across roads, rivers and train tracks, in endless mode or 15 rescue missions, with four critters to pick from.
-- **Galaxy Defenders:** coming soon.
+- **Galaxy Defenders:** a space shooter with alien waves, bosses and an upgrade card after every wave, for 1 player or 2 as a team.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -99,7 +99,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/pong-party/` | Pong Party |
 | `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
 | `games/critter-crossing/` | Critter Crossing (`missions.js` holds the 15 rescue missions) |
-| `games/galaxy-defenders/` | Coming-soon placeholder |
+| `games/galaxy-defenders/` | Galaxy Defenders |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -136,6 +136,8 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `brick-bash:levels`: up to 50 household levels from the editor, each with its maker and best score
 - `critter-crossing:missions`: stars (0–3) for each rescue mission, per player
 - `critter-crossing:prefs`: each player's last critter and difficulty
+- `galaxy-defenders:sectors`: the furthest sector each player has reached on each level (team runs count too)
+- `galaxy-defenders:lastSetup` and `galaxy-defenders:coopLevel`: the last team and level for 2 players
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -401,6 +403,24 @@ Impossible's chain control:
 
 - **High score:** endless points per player and level, with a household top 5. The home tile also shows the mission stars earned.
 - **Daily twists:** backwards day (cars speed up the longer you wait), a giant critter, or always night. The twist plays endless mode at Medium.
+## Galaxy Defenders
+
+- **Controls:** drag anywhere to steer. The ship follows the finger's movement rather than sitting under it, so small fingers don't hide it. It fires by itself. On a keyboard, use the arrows or A/D.
+- **Sectors:** 5 waves of aliens, then a boss. Aliens fly into formation, sway side to side, drop slow shots, and break off to dive at you. Each wave adds rows and new kinds of aliens.
+- **Aliens:**
+  - Grunt: stays in formation and drops slow shots.
+  - Dodger: slides sideways when a shot is lined up under it.
+  - Splitter: splits into two small aliens that zip around.
+  - Diver: swoops down toward your ship.
+  - Shield alien: straight shots bounce off its shield. Moving while you shoot tilts your shots, and a tilted shot (or a spread or side shot) knocks the shield away.
+- **Upgrade cards** after every wave: pick 1 of 3. They stack for the rest of the run:
+  - double shot, spread shot, faster fire, piercing shots, side cannons
+  - a drone buddy, a shield bubble that blocks one hit, a magnet for score gems, and an extra life
+- **Bosses:** Mothership Mo, Squiddo, Star Crab, Comet King and Galaxy Brain. Each has a health bar and 2–3 attack patterns: fans of shots, aimed bursts, shot rain, spirals, laser beams (a dashed warning line comes first), charges, and calling in divers. After the fifth they come round again, tougher.
+- **2 players:** two ships on one screen. The first player steers on the left half, the second on the right. Each upgrade goes to both ships, and the players take turns picking. The run ends when both ships are out of lives.
+- **Levels of difficulty:** these change alien speed, how often they shoot, your ship's bump size, boss health and lives (Easy 5, Medium 3, Hard 3, Impossible 2).
+- **Score:** points for aliens (more in later sectors), score gems and a bonus for each boss. The furthest sector reached is recorded too, and both show on the home tile. The top 5 is for playing alone.
+- **Daily twists:** aliens twice as fast but huge shots, surprise upgrades instead of cards, or a one-hit run with triple points. The twist plays at Medium.
 ## Hangman multiplayer scoring
 
 - A guesser gets **+1** for each correct letter they guess, however many times it appears.

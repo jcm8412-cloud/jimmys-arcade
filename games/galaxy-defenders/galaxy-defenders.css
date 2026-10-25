@@ -1,0 +1,51 @@
+/* Galaxy Defenders' own styles, scoped under .gd (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.gd.menu { gap: 14px; }
+.gd .title { font-size: clamp(2.6rem, 12vw, 4rem); line-height: .95; text-align: center; }
+.gd .title span { color: var(--accent); }
+.gd .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.gd .menu-buttons { display: grid; gap: 12px; }
+.gd .btn.daily { display: grid; place-items: center; line-height: 1.05; background: var(--yellow); }
+.gd .btn.daily small { font-family: var(--font-body); font-size: 1rem; }
+.gd .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.gd .playing-as .avatar { width: 40px; height: 40px; }
+.gd .playing-as b { font-weight: 400; color: var(--accent); }
+.gd .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.gd .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+
+.gd .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.gd .seg button {
+  min-height: 44px; padding: 4px 2px; cursor: pointer; font-size: 1rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 10px;
+}
+.gd .seg button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+
+.gd .levels { display: grid; gap: 10px; }
+.gd .level {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px;
+  text-align: left; padding: 10px 14px; min-height: 64px;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.4); border-radius: 12px; cursor: pointer;
+}
+.gd .level b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; color: var(--accent); }
+.gd .level small { grid-column: 1; font-size: 1rem; color: var(--chalk-dim); }
+.gd .level .stats { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(2, auto); gap: 0 12px; text-align: center; font-size: .85rem; color: var(--chalk-dim); }
+.gd .level .stats span { font-size: 1.3rem; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.gd .level .stats i { font-style: normal; }
+.gd .level.impossible b { color: var(--pink); }
+
+/* ---------- Play ---------- */
+.gd .act-hud { gap: 10px; }
+.gd .act-hud .wave { color: var(--chalk-dim); }
+.gd .act-hud .lives { white-space: nowrap; }
+
+/* Upgrade cards between waves */
+.gd .gd-cards { display: grid; gap: 8px; }
+.gd .gd-card {
+  display: grid; justify-items: center; gap: 2px; padding: 12px 10px; min-height: 64px; cursor: pointer;
+  background: rgba(0,0,0,.18); border: 2px solid var(--accent); border-radius: 14px;
+}
+.gd .gd-card b { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; color: var(--accent); }
+.gd .gd-card small { font-size: 1rem; color: var(--chalk-dim); }
+.gd .gd-card i { font-style: normal; color: var(--yellow); letter-spacing: 2px; font-size: .9rem; }
+.gd .gd-card:active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
