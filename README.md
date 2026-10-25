@@ -21,7 +21,8 @@ A collection of chalkboard games for kids that plays like an app on phones and t
   - Play the computer at four levels, or 2 players with the device flat between you.
   - 4 players on a tablet.
 - **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
-- **Critter Crossing, Galaxy Defenders:** coming soon.
+- **Critter Crossing:** hop across roads, rivers and train tracks, in endless mode or 15 rescue missions, with four critters to pick from.
+- **Galaxy Defenders:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -97,7 +98,8 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/chalk-snake/` | Chalk Snake |
 | `games/pong-party/` | Pong Party |
 | `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
-| `games/critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
+| `games/critter-crossing/` | Critter Crossing (`missions.js` holds the 15 rescue missions) |
+| `games/galaxy-defenders/` | Coming-soon placeholder |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -132,6 +134,8 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `brick-bash:progress`: the furthest campaign level each player has unlocked
 - `brick-bash:prefs`: each player's last difficulty
 - `brick-bash:levels`: up to 50 household levels from the editor, each with its maker and best score
+- `critter-crossing:missions`: stars (0–3) for each rescue mission, per player
+- `critter-crossing:prefs`: each player's last critter and difficulty
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -375,6 +379,28 @@ Impossible's chain control:
 - **Level editor:** pick a brick kind and tap or drag on the grid, then name and save the level. Saved levels show under **Our levels** with who made it and the best score on it, for everyone in the house. Up to 50 levels can be kept. **Try it** plays a level before saving it.
 - **High score:** points in one campaign run, per player and difficulty, with a household top 5.
 - **Daily twists:** the ball grows with every hit, every brick explodes, or the whole game is upside down with the paddle at the top. The twist runs the campaign from level 1 at Medium.
+## Critter Crossing
+
+- **Controls:** tap to hop forward, and swipe left, right or down to hop that way. Each tap or swipe is exactly one hop. On a keyboard, use the arrows (or WASD), with space to hop forward.
+- **Critters**, picked before each run:
+  - Frog: the regular hopper.
+  - Chicken: swipe up for a double-long hop, sailing over the row in between. On a keyboard, Shift+Up.
+  - Turtle: hops a little slower, but never slides on rainy logs and holds on when a log reaches the edge.
+  - Duck: floats for 2 seconds when it lands in water, with a timer ring to show how long is left.
+- **Endless:** grass, roads, rivers and train tracks come in random order and get faster the further you go. The score is rows hopped plus 5 for each coin. A chalk eraser creeps up from the bottom of the screen, so standing still too long gets you erased. Trains are announced by a blinking red light.
+- **Weather** changes every 50 rows: sunny, rain (logs are slippery), fog (cars show up only when they're close) and night (only headlights and a small glow around your critter).
+- **Rescue missions:** 15 short levels with a finish line: bring a baby critter home, collect all the stars, or deliver a letter to the mailbox. Finishing earns up to 3 stars for speed, and each mission unlocks the next. Some missions have rain, fog or night.
+- **Levels of difficulty:**
+
+| Level | Traffic | Bumps | Lives |
+|---|---|---|---|
+| Easy | Slow, with wide gaps | Small bump box, longer logs | 3 |
+| Medium | Normal | Normal | 2 |
+| Hard | Busy | Normal | 1 |
+| Impossible | Rush hour | Big bump box | 1 |
+
+- **High score:** endless points per player and level, with a household top 5. The home tile also shows the mission stars earned.
+- **Daily twists:** backwards day (cars speed up the longer you wait), a giant critter, or always night. The twist plays endless mode at Medium.
 ## Hangman multiplayer scoring
 
 - A guesser gets **+1** for each correct letter they guess, however many times it appears.

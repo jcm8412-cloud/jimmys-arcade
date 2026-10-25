@@ -1,0 +1,53 @@
+/* Critter Crossing's own styles, scoped under .cc (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.cc.menu { gap: 14px; }
+.cc .title { font-size: clamp(2.6rem, 12vw, 4rem); line-height: .95; text-align: center; }
+.cc .title span { color: var(--accent); }
+.cc .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.cc .menu-buttons { display: grid; gap: 12px; }
+.cc .btn.daily { display: grid; place-items: center; line-height: 1.05; background: var(--yellow); }
+.cc .btn.daily small { font-family: var(--font-body); font-size: 1rem; }
+.cc .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.cc .playing-as .avatar { width: 40px; height: 40px; }
+.cc .playing-as b { font-weight: 400; color: var(--accent); }
+.cc .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.cc .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+
+.cc .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.cc .seg button {
+  min-height: 44px; padding: 4px 2px; cursor: pointer; font-size: 1rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 10px;
+}
+.cc .seg button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+
+/* ---------- Missions ---------- */
+.cc .cc-mlist { display: grid; gap: 8px; }
+.cc .cc-mission {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; text-align: left;
+  min-height: 60px; padding: 8px 12px; cursor: pointer;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.4); border-radius: 12px;
+}
+.cc .cc-mission .num { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); width: 1.4em; text-align: center; }
+.cc .cc-mission .txt { display: grid; min-width: 0; }
+.cc .cc-mission b { font-weight: 400; font-size: 1.2rem; }
+.cc .cc-mission small { font-size: .9rem; color: var(--chalk-dim); }
+.cc .cc-mission .stars { color: var(--yellow); font-size: 1.2rem; letter-spacing: 1px; white-space: nowrap; }
+.cc .cc-mission:disabled { cursor: default; opacity: .45; border-style: dashed; }
+
+/* ---------- Critter picker ---------- */
+.cc .cc-critters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cc .cc-critters button {
+  display: grid; justify-items: center; gap: 2px; padding: 10px 6px; cursor: pointer; text-align: center;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 14px;
+}
+.cc .cc-critters button[aria-checked="true"] { border-style: solid; border-color: var(--accent); background: rgba(0,0,0,.28); }
+.cc .cc-critters canvas { width: 56px; height: 56px; }
+.cc .cc-critters b { font-family: var(--font-display); font-weight: 400; font-size: 1.4rem; color: var(--accent); }
+.cc .cc-critters small { font-size: .9rem; color: var(--chalk-dim); line-height: 1.15; }
+
+/* ---------- Play ---------- */
+.cc .act-hud { gap: 10px; }
+.cc .act-hud .coins { color: var(--yellow); }
+.cc .act-hud .goal { color: var(--accent); overflow: hidden; text-overflow: ellipsis; }
+.cc .cc-stars { font-size: 2.6rem; line-height: 1; margin: 0; color: var(--yellow); letter-spacing: 4px; }
