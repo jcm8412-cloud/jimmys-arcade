@@ -416,7 +416,7 @@ Impossible's chain control:
   - Splitter: splits into two small aliens that zip around.
   - Diver: swoops down toward your ship.
   - Shield alien: straight shots bounce off its shield. Moving while you shoot tilts your shots, and a tilted shot (or a spread or side shot) knocks the shield away.
-- **Upgrade cards** after every wave: pick 1 of 3. They stack for the rest of the run:
+- **Upgrade cards** after every wave: pick 1 of 3 (tap or click a card, or press 1, 2 or 3). They stack for the rest of the run:
   - double shot, spread shot, faster fire, piercing shots, side cannons
   - a drone buddy, a shield bubble that blocks one hit, a magnet for score gems, and an extra life
 - **Bosses:** Mothership Mo, Squiddo, Star Crab, Comet King and Galaxy Brain. Each has a health bar and 2–3 attack patterns: fans of shots, aimed bursts, shot rain, spirals, laser beams (a dashed warning line comes first), charges, and calling in divers. After the fifth they come round again, tougher.

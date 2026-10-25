@@ -49,3 +49,5 @@
 .gd .gd-card small { font-size: 1rem; color: var(--chalk-dim); }
 .gd .gd-card i { font-style: normal; color: var(--yellow); letter-spacing: 2px; font-size: .9rem; }
 .gd .gd-card:active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.gd .gd-card kbd { font-family: var(--font-body); font-size: .8rem; color: var(--chalk-dim); border: 1px solid rgba(242,240,230,.3); border-radius: 4px; padding: 0 5px; }
+@media (hover: none) { .gd .gd-card kbd { display: none; } } /* key hints only where there's likely a keyboard */

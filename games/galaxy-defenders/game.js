@@ -258,7 +258,9 @@
   const drags = new Map(); // pointerId -> { ship, fx, sx }
   const local = e => { const r = scr.stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   scr.stage.addEventListener("pointerdown", e => {
-    if (!R) return;
+    // Only presses on the sky itself steer. Grabbing the pointer for a press on the upgrade cards or the
+    // Paused buttons would send the click to the stage instead, and the button would never get it.
+    if (!R || e.target !== scr.canvas) return;
     const { x } = local(e);
     const s = R.coop ? R.ships[x < W() / 2 ? 0 : 1] : R.ships[0];
     if (!s || !s.alive) return;
@@ -278,6 +280,12 @@
   const keysDown = new Set();
   document.addEventListener("keydown", e => {
     if (A.currentScreen !== "gd-play" || A.dialogOpen()) return;
+    // Keys 1, 2 and 3 pick an upgrade card.
+    if (R && R.state === "pick" && ["1", "2", "3"].includes(e.key)) {
+      const card = $("gd-play-panel").querySelectorAll(".gd-card")[+e.key - 1];
+      if (card && !$("gd-play-panel").hidden) { e.preventDefault(); pickCard(card.dataset.up); }
+      return;
+    }
     if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) { keysDown.add(e.key.toLowerCase()); e.preventDefault(); }
   });
   document.addEventListener("keyup", e => keysDown.delete(e.key.toLowerCase()));
@@ -617,19 +625,22 @@
       scr.showPanel({
         html: `<h2>${title}</h2>
           <p class="note">${chooser ? `${esc(chooser.profile.name)} picks an upgrade for both ships` : "Pick an upgrade"}</p>
-          <div class="gd-cards">${cards.map(k => {
+          <div class="gd-cards">${cards.map((k, i) => {
             const u = UPGRADES[k], lv = k === "life" || k === "shield" ? -1 : R.up[k];
-            return `<button class="gd-card" data-up="${k}"><b>${u.name}</b><small>${u.desc}</small>${lv >= 0 ? `<i>${"●".repeat(lv + 1)}${"○".repeat(u.max - lv - 1)}</i>` : ""}</button>`;
+            return `<button class="gd-card" data-up="${k}"><b>${u.name}</b><small>${u.desc}</small>${lv >= 0 ? `<i>${"●".repeat(lv + 1)}${"○".repeat(u.max - lv - 1)}</i>` : ""}<kbd>${i + 1}</kbd></button>`;
           }).join("")}</div>`,
         buttons: []
       });
-      $("gd-play-panel").querySelectorAll(".gd-card").forEach(b => b.addEventListener("click", () => {
-        if (R.state !== "pick") return; // one pick per wave, even with a double tap
-        applyUpgrade(b.dataset.up);
-        R.picker++;
-        startWave();
-      }));
+      const cardEls = [...$("gd-play-panel").querySelectorAll(".gd-card")];
+      cardEls.forEach(b => b.addEventListener("click", () => pickCard(b.dataset.up)));
+      cardEls[0].focus({ preventScroll: true }); // so Enter (or Tab, then Enter) works on a keyboard
     }, wasBoss ? 300 : 500);
+  }
+  function pickCard(k) {
+    if (!R || R.state !== "pick") return; // one pick per wave, even with a double tap
+    applyUpgrade(k);
+    R.picker++;
+    startWave();
   }
   function applyUpgrade(k) {
     if (k === "life") for (const s of aliveShips()) s.lives = Math.min(UPGRADES.life.max, s.lives + 1);

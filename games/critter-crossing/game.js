@@ -352,7 +352,9 @@
   /* ---------- Input: tap to hop forward, swipe to hop that way. One touch, one hop. ---------- */
   let touch = null;
   scr.stage.addEventListener("pointerdown", e => {
-    if (!R) return;
+    // Only presses on the game itself count. Grabbing the pointer for a press on a button over it (Paused,
+    // end-of-round panels) would send the click to the stage instead, and the button would never get it.
+    if (!R || e.target !== scr.canvas) return;
     touch = { id: e.pointerId, x: e.clientX, y: e.clientY, fired: false };
     try { scr.stage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     e.preventDefault();

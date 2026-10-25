@@ -240,7 +240,9 @@
   }
   const local = e => { const r = scr.stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   scr.stage.addEventListener("pointerdown", e => {
-    if (!R) return;
+    // Only presses on the game itself count. Grabbing the pointer for a press on a button over it (Paused,
+    // end-of-round panels) would send the click to the stage instead, and the button would never get it.
+    if (!R || e.target !== scr.canvas) return;
     const { x, y } = local(e);
     const p = zoneOf(x, y);
     if (!p) return;

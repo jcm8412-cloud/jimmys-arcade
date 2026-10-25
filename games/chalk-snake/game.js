@@ -255,7 +255,8 @@
     if (dir === last || (dir === FLIP[last] && snake.body.length > 1)) return; // never straight back into yourself
     if (snake.queue.length < 2) snake.queue.push(dir);
   }
-  Act.swipes(scr.stage, {
+  // Swipes are read on the canvas, not the whole stage, so buttons over it (Paused, end-of-round panels) still get their clicks.
+  Act.swipes(scr.canvas, {
     onSwipe(dir, info) {
       if (!R) return;
       if (R.mode === "battle") {
