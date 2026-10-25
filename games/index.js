@@ -12,7 +12,7 @@
   { folder: "dots-and-boxes", files: ["dots-and-boxes.css", "engine.js", "game.js"] },
   { folder: "chalk-snake", files: ["chalk-snake.css", "game.js"] },
   { folder: "pong-party", files: ["pong-party.css", "game.js"] },
-  { folder: "brick-bash", files: ["game.js"] },
+  { folder: "brick-bash", files: ["brick-bash.css", "levels.js", "game.js"] },
   { folder: "critter-crossing", files: ["game.js"] },
   { folder: "galaxy-defenders", files: ["game.js"] }
 ];

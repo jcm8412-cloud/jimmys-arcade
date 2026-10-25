@@ -20,7 +20,8 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Pong Party:** Pong with weird balls and power-ups.
   - Play the computer at four levels, or 2 players with the device flat between you.
   - 4 players on a tablet.
-- **Brick Bash, Critter Crossing, Galaxy Defenders:** coming soon.
+- **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
+- **Critter Crossing, Galaxy Defenders:** coming soon.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -95,7 +96,8 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `shell/action.js`, `shell/action.css` | Shared kit for the action games: canvas loop, pause, countdown, swipes, high scores, daily twist |
 | `games/chalk-snake/` | Chalk Snake |
 | `games/pong-party/` | Pong Party |
-| `games/brick-bash/`, `critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
+| `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
+| `games/critter-crossing/`, `galaxy-defenders/` | Coming-soon placeholders |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -127,6 +129,9 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `pong-party:record`: wins and losses against each computer level, per player
 - `pong-party:wins`: 2- and 4-player match wins per player
 - `pong-party:lastSetup2` and `pong-party:lastSetup4`
+- `brick-bash:progress`: the furthest campaign level each player has unlocked
+- `brick-bash:prefs`: each player's last difficulty
+- `brick-bash:levels`: up to 50 household levels from the editor, each with its maker and best score
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -345,6 +350,31 @@ Impossible's chain control:
 - **Daily twists:** two balls at once, shrinking paddles, or bumpers in the middle. The twist plays against the computer at Medium.
 - **Look:** paddles follow the picture theme: a snowman paddle, a balloon paddle, a pumpkin paddle and so on, each outlined in its player's color.
 
+## Brick Bash
+
+- **Controls:** drag anywhere to move the paddle and tap to launch the ball. The aim arrow swings from side to side, and the ball goes where it points. On a keyboard, the arrows move and space launches (and fires lasers).
+- **Campaign:** 30 hand-made chalk pictures, from a smiley and a rocket to a castle and a dino. Each player picks any level up to the furthest one they've reached. A run carries on level after level until the balls run out, and after each level you can keep going or stop and bank your score.
+- **Levels of difficulty:** these change the ball speed, paddle size and lives, never the bricks:
+
+| Level | Ball | Paddle | Lives |
+|---|---|---|---|
+| Easy | Slow | Big, with extra reach at the ends | 5 |
+| Medium | Normal | Medium | 3 |
+| Hard | Fast | Small | 3 |
+| Impossible | Very fast | Tiny | 2 |
+
+- **Bricks:** normal (one hit), tough (2 or 3 hits, cracking as they go), explosive (clears the bricks around it and sets off other explosive bricks), steel (can't be broken and is never needed to finish a level), and power-up bricks (marked with a star).
+- **Power-ups**, caught with the paddle:
+  - multi-ball
+  - wide paddle
+  - lasers for 8 seconds (tap to shoot)
+  - sticky paddle (catches the ball so you can aim again)
+  - slow ball
+  - extra life
+- **Bosses:** levels 5, 10, 15, 20, 25 and 30 are chalk monsters built from bricks. They slide side to side and drop slow blobs to dodge. Hitting the glowing weak spot takes a chunk off the health bar, and the weak spot jumps to one of the monster's eyes (the dark dots). On Easy and Medium a blob makes the paddle slow for a moment; on Hard and Impossible it costs a life.
+- **Level editor:** pick a brick kind and tap or drag on the grid, then name and save the level. Saved levels show under **Our levels** with who made it and the best score on it, for everyone in the house. Up to 50 levels can be kept. **Try it** plays a level before saving it.
+- **High score:** points in one campaign run, per player and difficulty, with a household top 5.
+- **Daily twists:** the ball grows with every hit, every brick explodes, or the whole game is upside down with the paddle at the top. The twist runs the campaign from level 1 at Medium.
 ## Hangman multiplayer scoring
 
 - A guesser gets **+1** for each correct letter they guess, however many times it appears.

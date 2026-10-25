@@ -1,0 +1,86 @@
+/* Brick Bash's own styles, scoped under .bb (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.bb.menu { gap: 14px; }
+.bb .title { font-size: clamp(2.8rem, 13vw, 4.2rem); line-height: .95; text-align: center; }
+.bb .title span { color: var(--accent); }
+.bb .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.bb .menu-buttons { display: grid; gap: 12px; }
+.bb .btn.daily { display: grid; place-items: center; line-height: 1.05; background: var(--yellow); }
+.bb .btn.daily small { font-family: var(--font-body); font-size: 1rem; }
+.bb .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.bb .playing-as .avatar { width: 40px; height: 40px; }
+.bb .playing-as b { font-weight: 400; color: var(--accent); }
+.bb .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.bb .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+
+.bb .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.bb .seg button {
+  min-height: 44px; padding: 4px 2px; cursor: pointer; font-size: 1rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 10px;
+}
+.bb .seg button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+
+/* Campaign map: 30 level buttons */
+.bb .bb-map { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bb .bb-lvl {
+  display: grid; place-items: center; gap: 0; min-height: 62px; padding: 4px 2px; cursor: pointer;
+  background: rgba(0,0,0,.14); border: 2px solid rgba(242,240,230,.4); border-radius: 12px;
+}
+.bb .bb-lvl b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1; color: var(--chalk); }
+.bb .bb-lvl small { font-size: .78rem; color: var(--chalk-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb .bb-lvl.boss { border-color: var(--pink); }
+.bb .bb-lvl.boss b { color: var(--pink); }
+.bb .bb-lvl.next { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.bb .bb-lvl:disabled { cursor: default; opacity: .4; border-style: dashed; }
+
+/* ---------- Our levels ---------- */
+.bb .bb-list { display: grid; gap: 10px; }
+.bb .bb-card { border: 2px solid rgba(242,240,230,.4); border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.14); }
+.bb .bb-card-play { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; background: none; border: none; cursor: pointer; text-align: left; }
+.bb .bb-card-play canvas { flex: none; width: 78px; height: 40px; border-radius: 6px; background: rgba(0,0,0,.2); }
+.bb .bb-card-text { display: grid; gap: 2px; min-width: 0; }
+.bb .bb-card-text b { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb .bb-card-text small { display: flex; align-items: center; gap: 6px; font-size: .95rem; color: var(--chalk-dim); }
+.bb .bb-card-text .avatar { width: 22px; height: 22px; }
+.bb .bb-card-tools { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px dashed rgba(242,240,230,.2); }
+.bb .bb-card-tools .btn { min-height: 44px; border-radius: 0; border: none; font-size: 1rem; }
+
+/* ---------- Editor ---------- */
+/* Brick swatches: used in the tool palette and the grid. */
+.bb .bk { display: block; border-radius: 3px; background: rgba(242,240,230,.06); box-shadow: inset 0 0 0 1px rgba(242,240,230,.12); }
+.bb .bk[data-t="w"] { background: #f2f0e6; }
+.bb .bk[data-t="y"] { background: #f3d36b; }
+.bb .bk[data-t="p"] { background: #f29a9a; }
+.bb .bk[data-t="b"] { background: #9fd3e8; }
+.bb .bk[data-t="g"] { background: #b8e986; }
+.bb .bk[data-t="o"] { background: #f5a142; }
+.bb .bk[data-t="v"] { background: #d7b4f3; }
+.bb .bk[data-t="2"] { background: linear-gradient(#c8cfc4 46%, #8d998f 46% 54%, #c8cfc4 54%); }
+.bb .bk[data-t="3"] { background: linear-gradient(#a9b5ab 30%, #6f7c72 30% 36%, #a9b5ab 36% 64%, #6f7c72 64% 70%, #a9b5ab 70%); }
+.bb .bk[data-t="X"] { background: radial-gradient(circle, #7a2e1c 0 22%, #ff8a65 26%); }
+.bb .bk[data-t="#"] { background: repeating-linear-gradient(-45deg, #5f7166 0 4px, #73867a 4px 6px); }
+.bb .bk[data-t="?"] { background: radial-gradient(circle, #8a5a34 0 18%, #f3d36b 22%); }
+.bb .bk[data-t="."] { background: rgba(242,240,230,.06); }
+.bb .bb-tools button .bk[data-t="."] { background: none; box-shadow: inset 0 0 0 2px rgba(242,240,230,.5); }
+
+.bb .bb-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.bb .bb-tools button {
+  display: grid; justify-items: center; gap: 3px; min-height: 52px; padding: 6px 2px; cursor: pointer; font-size: .9rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.3); border-radius: 10px;
+}
+.bb .bb-tools button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+.bb .bb-tools .bk { width: 36px; height: 16px; }
+
+.bb .bb-grid {
+  display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); grid-template-rows: repeat(10, auto); gap: 2px;
+  padding: 4px; border-radius: 10px; background: rgba(0,0,0,.18); box-shadow: inset 0 0 0 2px rgba(242,240,230,.25);
+  touch-action: none; -webkit-user-select: none; user-select: none; cursor: crosshair;
+}
+.bb .bb-grid .bk { aspect-ratio: 3 / 2; }
+.bb .bb-ed-buttons { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px; }
+.bb .bb-ed-buttons .btn { min-width: 0; }
+
+/* ---------- Play ---------- */
+.bb .act-hud { gap: 8px; }
+.bb .act-hud .lvname { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; color: var(--accent); }
