@@ -1,0 +1,65 @@
+/* Toy Tower's own styles, scoped under .tt (the class on its screens). */
+
+/* ---------- Menu ---------- */
+.tt.menu { gap: 14px; }
+.tt .title { font-size: clamp(2.8rem, 13vw, 4.2rem); line-height: .95; text-align: center; }
+.tt .title span { color: var(--accent); }
+.tt .tagline { text-align: center; color: var(--chalk-dim); margin: -6px 0 0; }
+.tt .menu-buttons { display: grid; gap: 12px; }
+
+/* ---------- Play: the tower above, the controls strip below (thumbs never cover the action) ---------- */
+.tt .act-hud .stars { color: var(--yellow); }
+.tt .act-controls {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 6px 8px calc(4px + env(safe-area-inset-bottom)); touch-action: none; -webkit-user-select: none; user-select: none;
+}
+
+/* Left thumb: one big pad; where the thumb sits sets the direction. */
+.tt .tt-pad {
+  position: relative; flex: none; width: 148px; height: 148px; border-radius: 50%;
+  background: rgba(0,0,0,.18); border: 3px solid rgba(242,240,230,.45); touch-action: none;
+}
+.tt .tt-pad b { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px; border-radius: 50%; background: rgba(242,240,230,.12); }
+.tt .tt-pad i { position: absolute; width: 0; height: 0; border: 15px solid transparent; opacity: .55; }
+.tt .tt-pad .u { left: 50%; top: 10px; margin-left: -15px; border-bottom-color: var(--chalk); border-top-width: 0; }
+.tt .tt-pad .d { left: 50%; bottom: 10px; margin-left: -15px; border-top-color: var(--chalk); border-bottom-width: 0; }
+.tt .tt-pad .l { top: 50%; left: 10px; margin-top: -15px; border-right-color: var(--chalk); border-left-width: 0; }
+.tt .tt-pad .r { top: 50%; right: 10px; margin-top: -15px; border-left-color: var(--chalk); border-right-width: 0; }
+.tt .tt-pad.on-up .u { border-bottom-color: var(--accent); opacity: 1; }
+.tt .tt-pad.on-down .d { border-top-color: var(--accent); opacity: 1; }
+.tt .tt-pad.on-left .l { border-right-color: var(--accent); opacity: 1; }
+.tt .tt-pad.on-right .r { border-left-color: var(--accent); opacity: 1; }
+
+/* Right thumb: a big Jump button and a smaller Use button. */
+.tt .tt-btns { display: flex; align-items: flex-end; gap: 12px; }
+.tt .tt-jump, .tt .tt-use {
+  border-radius: 50%; cursor: pointer; touch-action: none; font-family: var(--font-display);
+  background: rgba(0,0,0,.18); border: 3px solid rgba(242,240,230,.55); color: var(--chalk);
+}
+.tt .tt-jump { width: 104px; height: 104px; font-size: 1.6rem; border-color: var(--accent); color: var(--accent); }
+.tt .tt-jump.on { background: color-mix(in srgb, var(--accent) 30%, transparent); transform: scale(.96); }
+.tt .tt-use { width: 64px; height: 64px; font-size: 1.1rem; margin-bottom: 44px; }
+.tt .tt-use:active { background: rgba(242,240,230,.15); }
+@media (max-height: 680px) {
+  .tt .tt-pad { width: 124px; height: 124px; }
+  .tt .tt-jump { width: 88px; height: 88px; }
+  .tt .tt-use { width: 56px; height: 56px; margin-bottom: 36px; }
+}
+
+/* ---------- ?tune panel ---------- */
+.tt .tt-tune-btn {
+  position: absolute; left: 6px; top: 6px; z-index: 1; min-height: 32px; padding: 2px 10px; border-radius: 8px; cursor: pointer;
+  background: rgba(0,0,0,.35); border: 1px solid rgba(242,240,230,.5); font-size: .95rem;
+}
+.tt .tt-tune {
+  position: absolute; left: 6px; right: 6px; top: 52px; max-height: 58%; overflow-y: auto; z-index: 3;
+  touch-action: pan-y; padding: 8px 10px; border-radius: 12px;
+  background: rgba(20,32,25,.94); border: 2px solid rgba(242,240,230,.4);
+}
+.tt .tt-tune-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.tt .tt-tune-head b { flex: 1; font-weight: 400; color: var(--accent); }
+.tt .tt-tune-head .btn { min-height: 36px; padding: 2px 10px; font-size: .95rem; }
+.tt .tt-tune-row { display: grid; grid-template-columns: 9.5em 1fr 3em; align-items: center; gap: 8px; font-size: .9rem; min-height: 32px; }
+.tt .tt-tune-row span { color: var(--chalk-dim); overflow-wrap: anywhere; }
+.tt .tt-tune-row input[type=range] { width: 100%; accent-color: var(--accent); }
+.tt .tt-tune-row output { text-align: right; font-variant-numeric: tabular-nums; }

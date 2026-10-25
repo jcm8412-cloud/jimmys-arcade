@@ -23,6 +23,7 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
 - **Critter Crossing:** hop across roads, rivers and train tracks, in endless mode or 15 rescue missions, with four critters to pick from.
 - **Galaxy Defenders:** a space shooter with alien waves, bosses and an upgrade card after every wave, for 1 player or 2 as a team.
+- **Toy Tower** (in progress): a climbing platformer. So far it has the hero's running, jumping and climbing on one test level.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -100,6 +101,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
 | `games/critter-crossing/` | Critter Crossing (`missions.js` holds the 15 rescue missions) |
 | `games/galaxy-defenders/` | Galaxy Defenders |
+| `games/toy-tower/` | Toy Tower (`config.js` holds every movement number, `test-level.json` the test level) |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -138,6 +140,7 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `critter-crossing:prefs`: each player's last critter and difficulty
 - `galaxy-defenders:sectors`: the furthest sector each player has reached on each level (team runs count too)
 - `galaxy-defenders:lastSetup` and `galaxy-defenders:coopLevel`: the last team and level for 2 players
+- `toy-tower:tune`: movement numbers changed in the tune panel (only used with `?tune`)
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
 
@@ -421,6 +424,25 @@ Impossible's chain control:
 - **Levels of difficulty:** these change alien speed, how often they shoot, your ship's bump size, boss health and lives (Easy 5, Medium 3, Hard 3, Impossible 2).
 - **Score:** points for aliens (more in later sectors), score gems and a bonus for each boss. The furthest sector reached is recorded too, and both show on the home tile. The top 5 is for playing alone.
 - **Daily twists:** aliens twice as fast but huge shots, surprise upgrades instead of cards, or a one-hit run with triple points. The twist plays at Medium.
+## Toy Tower (in progress)
+
+Stage 1 is the hero's movement and controls on one test level. Bandit, hazards, hearts and the real levels come later.
+
+- **Controls:** a strip under the tower, so thumbs never cover the action.
+  - Left thumb: one big pad. Where the thumb sits sets the direction (8 ways), so it can roll between directions without lifting.
+  - Right thumb: a big **Jump** button and a smaller **Use** button (no power-ups yet).
+  - Keyboard: arrows, space to jump, X to use.
+- **Moves:**
+  - Quick to start and stop, with full steering in the air.
+  - A tap of Jump is a short hop (about 1 tile); holding it is a full jump (a bit over 3 tiles).
+  - Jumps still work just after running off a ledge (coyote time), and one pressed just before landing happens on landing (jump buffering).
+  - Barely missing a ledge or girder pulls you up onto it. Clipping a corner with your head slides you around it.
+  - Ladders, vines and ropes are grabbed by jumping into them, or with Up. Jump off them in any direction, and hold Down to slide down fast.
+  - Down + Jump drops through a girder.
+  - Wall slide and wall jump on walls and the sides of the tower.
+  - Falls never hurt: landing shows a squash and a chalk-dust puff. Falling off the bottom goes back to the start for now.
+- **The test level** (`games/toy-tower/test-level.json`): girders, ladders, a vine, a rope, a two-wall chimney for wall jumps, a ledge to pull up onto, a high drop of more than 20 rows, and two stars. Rows are text, one character per tile: `.` empty, `=` girder, `#` solid block, `H` ladder, `V` vine, `R` rope, `*` star, `S` start.
+- **Tuning:** every movement number is in `games/toy-tower/config.js`, with a comment on what it does. Open the arcade with `?tune` at the end of its address (for example `https://<your-username>.github.io/jimmys-arcade/?tune`) to get a **Tune** button with a slider for each number. Changes apply instantly and are kept on that device. **Copy** puts all the numbers on the clipboard, and **Reset** goes back to the file's numbers.
 ## Hangman multiplayer scoring
 
 - A guesser gets **+1** for each correct letter they guess, however many times it appears.

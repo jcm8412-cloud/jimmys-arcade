@@ -14,5 +14,6 @@
   { folder: "pong-party", files: ["pong-party.css", "game.js"] },
   { folder: "brick-bash", files: ["brick-bash.css", "levels.js", "game.js"] },
   { folder: "critter-crossing", files: ["critter-crossing.css", "missions.js", "game.js"] },
-  { folder: "galaxy-defenders", files: ["galaxy-defenders.css", "game.js"] }
+  { folder: "galaxy-defenders", files: ["galaxy-defenders.css", "game.js"] },
+  { folder: "toy-tower", files: ["toy-tower.css", "config.js", "test-level.json", "game.js"] }
 ];
