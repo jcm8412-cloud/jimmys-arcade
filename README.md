@@ -418,10 +418,10 @@ Impossible's chain control:
   - Shield alien: straight shots bounce off its shield. Moving while you shoot tilts your shots, and a tilted shot (or a spread or side shot) knocks the shield away.
 - **Upgrade cards** after every wave: pick 1 of 3 (tap or click a card, or press 1, 2 or 3). They stack for the rest of the run:
   - double shot, spread shot, faster fire, piercing shots, side cannons
-  - a drone buddy, a shield bubble that blocks one hit, a magnet for score gems, and an extra life
+  - a drone buddy, a shield bubble that blocks one hit, a magnet for score gems, and an extra life (offered after about 1 wave in 5, up to 6 lives)
 - **Bosses:** Mothership Mo, Squiddo, Star Crab, Comet King and Galaxy Brain. Each has a health bar and 2–3 attack patterns: fans of shots, aimed bursts, shot rain, spirals, laser beams (a dashed warning line comes first), charges, and calling in divers. After the fifth they come round again, tougher.
 - **2 players:** two ships on one screen. The first player steers on the left half, the second on the right. Each upgrade goes to both ships, and the players take turns picking. The run ends when both ships are out of lives.
-- **Levels of difficulty:** these change alien speed, how often they shoot, your ship's bump size, boss health and lives (Easy 5, Medium 3, Hard 3, Impossible 2).
+- **Levels of difficulty:** these change alien speed, how often they shoot, your ship's bump size, boss health and lives (Easy 3, Medium 3, Hard 3, Impossible 2).
 - **Score:** points for aliens (more in later sectors), score gems and a bonus for each boss. The furthest sector reached is recorded too, and both show on the home tile. The top 5 is for playing alone.
 - **Daily twists:** aliens twice as fast but huge shots, surprise upgrades instead of cards, or a one-hit run with triple points. The twist plays at Medium.
 ## Toy Tower (in progress)

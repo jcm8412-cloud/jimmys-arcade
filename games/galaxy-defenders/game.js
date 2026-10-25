@@ -18,7 +18,7 @@
   // speed: alien movement. fire: alien shots per second (wave 1). shot: alien shot speed, as a share of the
   // screen height per second. hit: the ship's bump radius (px). boss: boss health. dive: time between dives.
   const LEVELS = {
-    easy: { name: "Easy", desc: "Slow aliens, 5 lives", speed: 0.7, fire: 0.45, shot: 0.2, lives: 5, hit: 6, boss: 0.7, dive: 1.5 },
+    easy: { name: "Easy", desc: "Slower aliens, 3 lives", speed: 0.78, fire: 0.58, shot: 0.23, lives: 3, hit: 7, boss: 0.82, dive: 1.25 },
     medium: { name: "Medium", desc: "A fair fight, 3 lives", speed: 0.9, fire: 0.75, shot: 0.26, lives: 3, hit: 8, boss: 1, dive: 1 },
     hard: { name: "Hard", desc: "Busy skies, 3 lives", speed: 1.1, fire: 1.05, shot: 0.32, lives: 3, hit: 10, boss: 1.25, dive: 0.8 },
     impossible: { name: "Impossible", desc: "A storm of aliens, 2 lives", speed: 1.3, fire: 1.4, shot: 0.38, lives: 2, hit: 11, boss: 1.5, dive: 0.65 }
@@ -33,7 +33,7 @@
     drone: { name: "Drone buddy", desc: "A helper that shoots too", max: 2 },
     shield: { name: "Shield bubble", desc: "Blocks one hit", max: 3 },
     magnet: { name: "Magnet", desc: "Pulls in score gems", max: 2 },
-    life: { name: "Extra life", desc: "One more life", max: 9 }
+    life: { name: "Extra life", desc: "One more life", max: 6, chance: 0.2 } // one of the cards after about 1 wave in 5 (it used to be about 1 in 3)
   };
 
   // Each sector ends with a different boss, each with its own attack patterns. After the fifth they come round again, tougher.
@@ -600,14 +600,16 @@
     } else R.wave++;
     scr.stop();
     updateHud();
+    const lifeOk = R.twist !== 2 && aliveShips().some(s => s.lives < UPGRADES.life.max); // a one-hit run stays one hit
     const pool = Object.keys(UPGRADES).filter(k => {
-      if (R.twist === 2 && (k === "life" || k === "shield")) return false; // a one-hit run stays one hit
-      if (k === "life") return aliveShips().some(s => s.lives < UPGRADES.life.max);
-      if (k === "shield") return aliveShips().some(s => s.shield < UPGRADES.shield.max);
+      if (k === "life") return false; // extra lives get their own, rarer draw below
+      if (k === "shield") return R.twist !== 2 && aliveShips().some(s => s.shield < UPGRADES.shield.max);
       return R.up[k] < UPGRADES[k].max;
     });
     const cards = [];
-    while (cards.length < 3 && pool.length) cards.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    // Extra life is one of the cards only now and then, the same chance however many other upgrades are left.
+    if (lifeOk && Math.random() < UPGRADES.life.chance) cards.push("life");
+    while (cards.length < 3 && pool.length) cards.splice(Math.floor(Math.random() * (cards.length + 1)), 0, pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     const title = wasBoss ? `Sector ${R.sector - 1} cleared!` : `Wave ${R.wave - 1} cleared!`;
     if (R.twist === 1 || !cards.length) {
       // Daily twist: the upgrade is a surprise.
