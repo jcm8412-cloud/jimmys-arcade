@@ -35,11 +35,13 @@
   ];
   const HIDEOUTS = [
     { id: "garage", name: "The Garage", sub: "Ramp Run", file: "games/toy-tower/garage.json" },
-    { id: "store", name: "The Toy Store", sub: "Conveyor Chaos" },
+    { id: "store", name: "The Toy Store", sub: "Conveyor Chaos", file: "games/toy-tower/store.json" },
     { id: "backyard", name: "The Backyard", sub: "Vine Swing" },
     { id: "fort", name: "The Box Fort", sub: "Tape Trouble" }
   ];
-  const POINTS = { coin: 10, jumpOver: 50, reach: 200, star: 500, perSecond: 10 };
+  const POINTS = { coin: 10, jumpOver: 50, pop: 50, reach: 200, star: 500, perSecond: 10 };
+  // Power-ups: the letter in a level's rows, and what the Use button calls them.
+  const POWERS = { w: { id: "wand", name: "Bubble wand" }, n: { id: "sneakers", name: "Super sneakers" }, h: { id: "shield", name: "Shield" }, j: { id: "double", name: "Double jump" } };
 
   // Tuned numbers from the ?tune panel are kept on this device (only used with ?tune).
   function deepAssign(dst, src) {
@@ -154,7 +156,7 @@
     rows.forEach((row, r) => {
       for (let c = 0; c < cols;) {
         const ch = row[c];
-        if (ch !== ">" && ch !== "<") { if (ch === "=") offs[r][c] = [0, 0]; c++; continue; }
+        if (ch !== ">" && ch !== "<") { if (ch === "=" || ch === "{" || ch === "}") offs[r][c] = [0, 0]; c++; continue; }
         let end = c;
         while (end + 1 < cols && row[end + 1] === ch) end++;
         for (let k = c; k <= end; k++) {
@@ -164,7 +166,7 @@
         c = end + 1;
       }
     });
-    const L = { def, name: def.name, cols, rows, offs, start: null, bandit: null, flags: [] };
+    const L = { def, name: def.name, cols, rows, offs, start: null, bandit: null, flags: [], lifts: def.lifts || [] };
     rows.forEach((row, r) => [...row].forEach((ch, c) => {
       if (ch === "S") L.start = { c, r };
       if (ch === "B") L.bandit = { c, r };
@@ -175,36 +177,40 @@
 
   /* ---------- Game state ----------
      G: { mode ("level" | "practice"), L (parsed level), entry (campaign entry), diff, cfg, player, hero,
-          hazards, popups, bandit, camY, t, time, coins, jumps, gotStar, taken Set("c,r"), hearts, livesLost,
-          checkpoint {x, y}, state ("play" | "lost" | "caught" | "done"), stateT }
-     hero: { x (middle), y (feet), vx, vy, onGround, climb {c, top, topY, bottomY, kind} | null, face, coyoteT,
-             bufferT, jumping, wall, wallT, lastWall, lockT, regrabT, dropT, landT, slideV, runPhase, dizzyT, safeT }
-     hazard: { kind ("ball" | "can"), x, y (bottom), r, row, dir, state ("roll" | "fall" | "ladder"), vx, vy,
-               bottomY, bottomRow, t, decided Set, jumped } */
+          hazards, popups, bubbles, lifts, bandit, camY, t, time, coins, jumps, gotStar, taken Set("c,r"), hearts,
+          livesLost, checkpoint {x, y}, state ("play" | "lost" | "caught" | "done"), stateT,
+          held (power-up waiting for Use, or null), wandT, sneakT (active until), shield, doubleJump }
+     hero: { x (middle), y (feet), vx, vy, onGround, lift (the lift stood on) | null, climb {c, top, topY, bottomY,
+             kind} | null, face, coyoteT, bufferT, jumping, airJumps, wall, wallT, lastWall, lockT, regrabT, dropT,
+             landT, slideV, runPhase, dizzyT, safeT }
+     hazard: { kind ("ball" | "can" | "robot" | "car"), x, y (bottom), r, row, dir, state ("roll" | "fall" | "ladder"),
+               vx, vy, bottomY, bottomRow, t, life, decided Set, jumped }
+     lift: { c, w, top, bottom, speed, pause, y (its top), dir (-1 up, 1 down), waitT, dy (moved this step) } */
   let G = null;
   const dustFx = Act.dust(70);
   const F = {};
 
+  // What every run starts with (both modes).
+  const freshRun = L => ({
+    L, hazards: [], popups: [], bubbles: [], t: 0, time: 0, coins: 0, jumps: 0, gotStar: false, taken: new Set(), livesLost: 0,
+    state: "play", stateT: 0, camY: 0, held: null, wandT: 0, bubbleT: 0, sneakT: 0, shield: false, doubleJump: false, pops: 0,
+    lifts: L.lifts.map(l => ({ ...l, y: l.start ? l.top : l.bottom, dir: l.start ? 1 : -1, waitT: l.pause, dy: 0 }))
+  });
   async function startLevel(entry, diff) {
-    const player = A.session.player;
-    G = {
-      mode: "level", entry, L: parseLevel(entry.def), diff, cfg: DIFFS[diff], player,
-      hazards: [], popups: [], t: 0, time: 0, coins: 0, jumps: 0, gotStar: false, taken: new Set(),
-      hearts: DIFFS[diff].hearts, livesLost: 0, state: "play", stateT: 0, camY: 0
-    };
+    G = Object.assign(freshRun(parseLevel(entry.def)), { mode: "level", entry, diff, cfg: DIFFS[diff], player: A.session.player, hearts: DIFFS[diff].hearts });
     G.checkpoint = spotAbove(G.L.start.c, G.L.start.r);
     const b = G.L.bandit;
     const bspot = spotAbove(b.c, b.r);
     const bt = tileAt(b.c, b.r + 1);
-    G.bandit = { x: bspot.x, y: bspot.y, row: b.r + 1, dir: bt === ">" ? 1 : bt === "<" ? -1 : (b.c < G.L.cols / 2 ? 1 : -1),
+    // He throws down the ramp he stands on (or the way his conveyor belt runs).
+    G.bandit = { x: bspot.x, y: bspot.y, row: b.r + 1, dir: downhill(b.c, b.r + 1) || belt(b.c, b.r + 1) || (b.c < G.L.cols / 2 ? 1 : -1),
       throwT: 2, pose: "idle", poseT: 0, tauntT: 4 };
     begin();
   }
   async function startPractice() {
     let def;
     try { def = await loadPractice(); } catch (err) { A.toast("Couldn't load the practice level. Try again."); return; }
-    G = { mode: "practice", L: parseLevel(def), player: A.session.player, hazards: [], popups: [], t: 0, time: 0,
-      coins: 0, jumps: 0, gotStar: false, taken: new Set(), hearts: 0, livesLost: 0, state: "play", stateT: 0, camY: 0 };
+    G = Object.assign(freshRun(parseLevel(def)), { mode: "practice", player: A.session.player, hearts: 0 });
     G.checkpoint = spotAbove(G.L.start.c, G.L.start.r);
     begin();
   }
@@ -231,7 +237,7 @@
   }
   function respawn() {
     G.hero = {
-      x: G.checkpoint.x, y: G.checkpoint.y, vx: 0, vy: 0, onGround: true, climb: null, face: 1, coyoteT: 0, bufferT: 0, jumping: false,
+      x: G.checkpoint.x, y: G.checkpoint.y, vx: 0, vy: 0, onGround: true, lift: null, climb: null, face: 1, coyoteT: 0, bufferT: 0, jumping: false, airJumps: 1,
       wall: 0, wallT: 0, lastWall: 0, lockT: 0, regrabT: 0, dropT: 0, landT: 0, slideV: 0, runPhase: 0, dizzyT: 0, safeT: 0
     };
   }
@@ -244,7 +250,9 @@
     return L.rows[r][c];
   };
   const solid = (c, r) => tileAt(c, r) === "#";
-  const plat = (c, r) => { const t = tileAt(c, r); return t === "=" || t === ">" || t === "<"; };
+  const plat = (c, r) => { const t = tileAt(c, r); return t === "=" || t === ">" || t === "<" || t === "{" || t === "}"; };
+  // Conveyor belts: } moves right, { moves left (they're girders too).
+  const belt = (c, r) => (tileAt(c, r) === "}" ? 1 : tileAt(c, r) === "{" ? -1 : 0);
   const isClimb = t => t === "H" || t === "V" || t === "R";
   // A girder with a ladder (or vine, or rope) under it is climbable too, so you can climb up onto it.
   const climbable = (c, r) => isClimb(tileAt(c, r)) || (plat(c, r) && isClimb(tileAt(c, r + 1)));
@@ -262,7 +270,7 @@
   scr.controls.innerHTML = `
     <div class="tt-pad" id="tt-pad" aria-label="Move"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i><b></b></div>
     <div class="tt-btns">
-      <button class="tt-use" id="tt-use" aria-label="Use power-up">Use</button>
+      <button class="tt-use" id="tt-use" aria-label="Use power-up"><canvas width="88" height="88" aria-hidden="true"></canvas><span>Use</span></button>
       <button class="tt-jump" id="tt-jump" aria-label="Jump">Jump</button>
     </div>`;
   const pad = { left: false, right: false, up: false, down: false };
@@ -302,7 +310,34 @@
   jumpEl.addEventListener("pointerup", jumpUp);
   jumpEl.addEventListener("pointercancel", jumpUp);
   $("tt-use").addEventListener("pointerdown", e => { e.preventDefault(); useItem(); });
-  function useItem() { if (G && scr.running) scr.message("No power-up yet", 800); }
+  // Use: switch on the power-up you're holding.
+  function useItem() {
+    if (!G || !scr.running || G.state !== "play") return;
+    const k = G.held;
+    if (!k) { scr.message("Grab a power-up first", 800); return; }
+    G.held = null;
+    if (k === "wand") { G.wandT = G.t + C.powerups.wandTime; G.bubbleT = 0; }
+    else if (k === "sneakers") G.sneakT = G.t + C.powerups.sneakersTime;
+    else if (k === "shield") G.shield = true;
+    else G.doubleJump = true; // for the rest of the level
+    A.sfx.win();
+    dustFx.emit(px(G.hero.x), px(G.hero.y - hh() / 2), "#f3d36b", 10);
+    scr.message({ wand: "Bubbles!", sneakers: "Super sneakers!", shield: "Shield on!", double: "Double jump!" }[k], 900);
+    paintUse();
+  }
+  // The Use button shows the power-up you're holding.
+  const useEl = $("tt-use"), useCtx = useEl.querySelector("canvas").getContext("2d");
+  let usePainted;
+  function paintUse() {
+    const k = G && G.held;
+    if (k === usePainted) return;
+    usePainted = k;
+    useCtx.setTransform(2, 0, 0, 2, 0, 0);
+    useCtx.clearRect(0, 0, 44, 44);
+    if (k) drawPowerIcon(useCtx, k, 22, 22, 36);
+    useEl.classList.toggle("ready", !!k);
+    useEl.setAttribute("aria-label", k ? `Use ${Object.values(POWERS).find(p => p.id === k).name}` : "Use power-up (none yet)");
+  }
   // Long-press menus and double-tap zoom stay out of the way of thumbs.
   scr.controls.addEventListener("contextmenu", e => e.preventDefault());
   scr.controls.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
@@ -328,6 +363,7 @@
   function update(dt) {
     G.t += dt;
     G.stateT += dt;
+    updateLifts(dt);
     const h = G.hero;
     if (G.state === "play" || G.state === "lost") {
       if (G.state === "play") G.time += dt;
@@ -346,6 +382,8 @@
       if (G.stateT > 2.6) finishLevel();
     }
     if (G.mode === "level") { updateBandit(dt); for (const z of G.hazards.slice()) updateHazard(z, dt); }
+    updateBubbles(dt);
+    paintUse();
     for (const p of G.popups) p.t += dt;
     G.popups = G.popups.filter(p => p.t < 0.9);
     const target = camTarget();
@@ -358,9 +396,13 @@
   function updateMove(h, inp, dt) {
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     if (dir) h.face = dir;
+    // Riding a lift, or a conveyor belt.
+    if (h.onGround && h.lift) h.y += h.lift.dy;
+    if (h.onGround && !h.lift) { const b = belt(Math.floor(h.x), Math.floor(h.y + 0.05)); if (b) moveX(h, b * C.store.conveyorSpeed * dt); } // a lift stopped at a belt doesn't get pulled along
     // Run and steer: quick to start, quick to stop, full control in the air.
     const ground = h.onGround;
-    const max = ground ? C.run.maxSpeed : C.air.maxSpeed;
+    const sneakers = G.t < G.sneakT;
+    const max = (ground ? C.run.maxSpeed : C.air.maxSpeed) * (sneakers ? C.powerups.sneakersRun : 1);
     let accel = dir ? (h.vx && Math.sign(h.vx) !== dir ? (ground ? C.run.turnAccel : C.air.accel * 1.5) : (ground ? C.run.accel : C.air.accel)) : (ground ? C.run.decel : C.air.decel);
     if (h.lockT > 0) accel *= C.wall.lockControl;
     h.vx = approach(h.vx, dir * max, accel * dt);
@@ -373,13 +415,17 @@
           // Down + Jump on a girder drops through it.
           h.dropT = 0.2; h.y += 0.02; h.onGround = false; h.bufferT = 0;
         } else {
-          h.vy = -C.jump.speed; h.jumping = true; h.onGround = false; h.coyoteT = 0; h.bufferT = 0; jumped = true;
+          h.vy = -C.jump.speed * (sneakers ? C.powerups.sneakersJump : 1); h.jumping = true; h.onGround = false; h.coyoteT = 0; h.bufferT = 0; jumped = true;
         }
       } else if (h.wall || h.wallT > 0) {
         const away = -(h.wall || h.lastWall);
         h.vx = away * C.wall.jumpX; h.vy = -C.wall.jumpY; h.face = away;
         h.lockT = C.wall.lockTime; h.jumping = true; h.bufferT = 0; h.wallT = 0; jumped = true;
         dustFx.emit(px(h.x - away * hw()), px(h.y - hh() / 2), "#f2f0e6", 4);
+      } else if (G.doubleJump && h.airJumps > 0) {
+        // Double jump power-up: one more jump in mid-air.
+        h.vy = -C.jump.speed * C.powerups.doubleJump; h.airJumps--; h.jumping = true; h.bufferT = 0; jumped = true;
+        dustFx.emit(px(h.x), px(h.y), "#f3d36b", 6);
       }
     }
     // Variable height: letting go early turns a jump into a hop.
@@ -403,6 +449,8 @@
       if (s != null) { h.y = s; h.vy = 0; }
     }
     h.onGround = h.vy >= 0 && groundBetween(h, h.y - 0.02, h.y + 0.02) != null;
+    h.lift = h.onGround ? groundLift : null;
+    if (h.onGround) h.airJumps = 1;
     if (h.onGround && !wasGround) landed(h, fallSpeed);
     if (wasGround && !h.onGround && !jumped) h.coyoteT = C.jump.coyoteTime; // walked off a ledge
     // Touching a wall (in the air): wall jumps and wall slides.
@@ -416,15 +464,22 @@
   }
 
   // The highest surface under the hero's feet between yFrom and yTo (girders count unless dropping through).
+  // Lifts count too (like girders); groundLift is set to the lift when that's what was found.
+  let groundLift = null;
   function groundBetween(h, yFrom, yTo) {
     const [c0, c1] = colsUnder(h);
     let best = null;
+    groundLift = null;
     for (let r = Math.floor(yFrom) - 1; r <= Math.floor(yTo); r++) {
       for (let c = c0; c <= c1; c++) {
         if (plat(c, r) && h.dropT > 0) continue;
         const s = surfaceTop(c, r, Math.max(c, Math.min(c + 1, h.x)));
         if (s != null && s >= yFrom - EPS && s <= yTo + EPS && (best == null || s < best)) best = s;
       }
+    }
+    if (h.dropT <= 0) for (const l of G.lifts) {
+      if (h.x + hw() <= l.c || h.x - hw() >= l.c + l.w) continue;
+      if (l.y >= yFrom - EPS && l.y <= yTo + EPS && (best == null || l.y <= best)) { best = l.y; groundLift = l; }
     }
     return best;
   }
@@ -559,7 +614,7 @@
     else if (inp.up && h.onGround && h.y <= topY + 0.05) return;                                  // already at the top
     h.climb = { c: hit.c, top, topY, bottomY, kind: climbKind(hit.c, hit.r) };
     h.y = Math.min(h.y, bottomY); // grabbed the end of a rope with feet hanging below it: hang from the end
-    h.vx = 0; h.vy = 0; h.onGround = false; h.jumping = false; h.slideV = C.climb.downSpeed;
+    h.vx = 0; h.vy = 0; h.onGround = false; h.lift = null; h.jumping = false; h.slideV = C.climb.downSpeed; h.airJumps = 1;
   }
   function updateClimb(h, inp, dt) {
     const cl = h.climb;
@@ -592,6 +647,7 @@
       h.climb = null;
       h.y = cl.bottomY;
       h.onGround = groundBetween(h, h.y - 0.02, h.y + 0.02) != null;
+      h.lift = h.onGround ? groundLift : null;
       if (h.onGround) { landed(h, h.vy); h.vy = 0; } else { h.regrabT = C.climb.regrabDelay; }
       return;
     }
@@ -606,6 +662,16 @@
   function collect(h) {
     overlapTiles(h, (c, r, t) => {
       const key = c + "," + r;
+      if (POWERS[t] && !G.taken.has(key)) {
+        // A power-up: hold one at a time, switched on with Use.
+        if (G.held) { if (G.t > (G.fullT || 0)) { scr.message("Tap Use first!", 800); G.fullT = G.t + 2; } return; }
+        G.taken.add(key);
+        G.held = POWERS[t].id;
+        A.sfx.right();
+        dustFx.emit(px(c + 0.5), px(r + 0.5), "#f3d36b", 8);
+        scr.message(`${POWERS[t].name}! Tap Use`, 1200);
+        return;
+      }
       if ((t !== "*" && t !== "c") || G.taken.has(key)) return;
       G.taken.add(key);
       if (t === "c") {
@@ -637,6 +703,14 @@
   /* ---------- Bonks, hearts and lives ---------- */
   function bonk(h, fromX) {
     if (G.t < h.safeT || G.state !== "play") return;
+    if (G.shield) {
+      // The shield power-up blocks this bonk.
+      G.shield = false; h.safeT = G.t + 1;
+      A.sfx.right();
+      dustFx.emit(px(h.x), px(h.y - hh() / 2), "#9fd3e8", 12);
+      scr.message("Shield!", 700);
+      return;
+    }
     G.hearts--;
     A.sfx.wrong(); A.buzz();
     h.dizzyT = G.t + C.bonk.dizzyTime; h.safeT = G.t + C.bonk.safeTime;
@@ -707,28 +781,40 @@
     }
   }
 
-  /* ---------- Bandit's toys: bouncy balls and paint cans ---------- */
+  /* ---------- Bandit's toys: bouncy balls and paint cans (Garage), wind-up robots and toy cars (Toy Store) ---------- */
+  const RADIUS = { ball: "ballRadius", can: "canRadius", robot: "robotRadius", car: "carRadius" };
   function spawnHazard(kind) {
     const B = G.bandit;
     G.hazards.push({
-      kind, x: B.x + B.dir * 0.4, y: B.y, r: kind === "can" ? C.hazards.canRadius : C.hazards.ballRadius, row: B.row, dir: B.dir,
-      state: "roll", vx: 0, vy: 0, t: Math.random() * 3, spin: 0, decided: new Set(), jumped: false, color: Math.floor(Math.random() * 3)
+      kind, x: B.x + B.dir * 0.4, y: B.y, r: C.hazards[RADIUS[kind]], row: B.row, dir: B.dir,
+      state: "roll", vx: 0, vy: 0, t: Math.random() * 3, spin: 0, decided: new Set(), jumped: false, color: Math.floor(Math.random() * 3),
+      life: kind === "robot" ? C.hazards.robotLife * (0.85 + Math.random() * 0.3) : 45
     });
+  }
+  // A toy's own speed (robots walk, cars zoom).
+  const toySpeed = z => G.cfg.hazardSpeed * (z.kind === "robot" ? C.hazards.robotSpeed : z.kind === "car" ? C.hazards.carSpeed : 1);
+  function popHazard(z) {
+    removeHazard(z, true);
+    G.pops++;
+    popup("+" + POINTS.pop, z.x, z.y - 1);
+    A.sfx.right();
   }
   function removeHazard(z, poof) {
     G.hazards = G.hazards.filter(o => o !== z);
     if (poof) dustFx.emit(px(z.x), px(z.y - z.r), "#f2f0e6", 6);
   }
   function updateHazard(z, dt) {
-    const sp = G.cfg.hazardSpeed;
+    const sp = toySpeed(z);
     z.t += dt;
+    // Wind-up robots run down after a while (and any toy that's been around too long tidies itself away).
+    if (z.t > z.life) { removeHazard(z, true); return; }
     if (z.state === "roll") {
       const c = Math.floor(z.x);
       const d = downhill(c, z.row);
       if (d) z.dir = d;
-      // Now and then a toy takes a ladder down instead of rolling past it.
+      // Now and then a ball or paint can takes a ladder down instead of rolling past it.
       const key = c + "," + z.row;
-      if (plat(c, z.row) && isClimb(tileAt(c, z.row + 1)) && !z.decided.has(key) && Math.abs(z.x - (c + 0.5)) < 0.2) {
+      if ((z.kind === "ball" || z.kind === "can") && plat(c, z.row) && isClimb(tileAt(c, z.row + 1)) && !z.decided.has(key) && Math.abs(z.x - (c + 0.5)) < 0.2) {
         z.decided.add(key);
         if (Math.random() < G.cfg.ladderChance) {
           let bottom = z.row + 1;
@@ -737,16 +823,19 @@
           if (s != null) { z.state = "ladder"; z.x = c + 0.5; z.bottomY = s; z.bottomRow = bottom + 1; return; }
         }
       }
-      let nx = z.x + z.dir * sp * dt;
-      // Bumping a wall: off the ground floor it disappears; on a girder it rolls back.
-      if (solid(Math.floor(nx + z.dir * z.r), Math.floor(z.y - 0.3))) {
+      // Conveyor belts carry toys along (a robot walking against a belt can be carried backward).
+      const v = z.dir * sp + belt(c, z.row) * C.store.conveyorSpeed;
+      let nx = z.x + v * dt;
+      // Bumping a wall: off the ground floor it disappears; on a girder it turns around.
+      const mv = Math.sign(v) || z.dir;
+      if (solid(Math.floor(nx + mv * z.r), Math.floor(z.y - 0.3))) {
         if (solid(c, z.row)) { removeHazard(z, true); return; }
         z.dir = -z.dir; nx = z.x;
       }
       z.x = nx;
-      z.spin += z.dir * sp * dt / z.r;
+      z.spin += v * dt / z.r;
       const s = surfaceTop(Math.floor(z.x), z.row, z.x);
-      if (s == null) { z.state = "fall"; z.vx = z.dir * sp * 0.6; z.vy = 0; } // off the end of the ramp
+      if (s == null) { z.state = "fall"; z.vx = v * 0.6; z.vy = 0; } // off the end of the ramp
       else z.y = s;
     } else if (z.state === "fall") {
       z.vy += C.hazards.gravity * dt;
@@ -772,6 +861,39 @@
   }
   // Bouncy balls hop as they roll.
   const hop = z => (z.kind === "ball" && z.state === "roll" ? Math.abs(Math.sin(z.t * 7)) * C.hazards.bounce : 0);
+
+  /* ---------- Lifts, and the bubble wand's bubbles ---------- */
+  function updateLifts(dt) {
+    for (const l of G.lifts) {
+      const y0 = l.y;
+      if (l.waitT > 0) l.waitT -= dt;
+      else {
+        l.y += l.dir * l.speed * dt;
+        if (l.y <= l.top) { l.y = l.top; l.dir = 1; l.waitT = l.pause; }
+        else if (l.y >= l.bottom) { l.y = l.bottom; l.dir = -1; l.waitT = l.pause; }
+      }
+      l.dy = l.y - y0;
+    }
+  }
+  function updateBubbles(dt) {
+    const h = G.hero;
+    if (G.t < G.wandT && G.state === "play") {
+      G.bubbleT -= dt;
+      if (G.bubbleT <= 0) {
+        G.bubbleT = C.powerups.bubbleEvery;
+        G.bubbles.push({ x: h.x + h.face * 0.45, y: h.y - hh() * 0.6, vx: h.face * C.powerups.bubbleSpeed, vy: -0.4, r: 0.24, t: 0 });
+      }
+    }
+    for (const b of G.bubbles) {
+      b.t += dt;
+      b.x += b.vx * dt; b.y += b.vy * dt + Math.sin(b.t * 9) * 0.01;
+      b.vx *= 1 - dt * 0.7;
+      for (const z of G.hazards) {
+        if (Math.hypot(z.x - b.x, z.y - z.r - hop(z) - b.y) < z.r + b.r) { b.t = 99; popHazard(z); break; }
+      }
+    }
+    G.bubbles = G.bubbles.filter(b => b.t < 1.6);
+  }
   function hitHazards(h) {
     for (const z of G.hazards) {
       const cy = z.y - z.r - hop(z), rr = z.r * C.hazards.hitScale;
@@ -792,7 +914,7 @@
     scr.stop();
     const def = G.entry.def, p = G.player, prog = progOf(p);
     const timeBonus = Math.max(0, Math.round((def.targetTime - G.time) * POINTS.perSecond));
-    const score = G.coins * POINTS.coin + G.jumps * POINTS.jumpOver + POINTS.reach + (G.gotStar ? POINTS.star : 0) + timeBonus;
+    const score = G.coins * POINTS.coin + G.jumps * POINTS.jumpOver + G.pops * POINTS.pop + POINTS.reach + (G.gotStar ? POINTS.star : 0) + timeBonus;
     const fast = G.time <= def.targetTime;
     const mask = 1 | (G.gotStar ? 2 : 0) | (fast ? 4 : 0);
     const rec = prog.levels[def.id] || (prog.levels[def.id] = { stars: 0, time: null, score: {} });
@@ -817,7 +939,7 @@
           <p class="note">He gave back your <b>${esc(item ? item.name.toLowerCase() : "toy")}</b>${newToy ? " (it's on your Toy Shelf now)" : ""}.</p>
           <ul class="tt-stars">${star(true, "Caught Bandit")}${star(G.gotStar, "Found the hidden star")}${star(fast, `Under ${fmtTime(def.targetTime)}`)}</ul>
           <p class="note">Time ${fmtTime(G.time)} · ${G.coins} coin${G.coins === 1 ? "" : "s"} · score <b>${score}</b>${starCount(rec.stars) > starCount(before) && before ? " · more stars!" : ""}</p>
-          ${next ? "" : `<p class="note">${HIDEOUTS[1].name} is coming soon!</p>`}`,
+          ${next ? "" : `<p class="note">More hideouts are coming soon!</p>`}`,
         buttons: [
           ...(next ? [{ label: "Next level", cls: "big", run: () => startLevel(next, G.diff) }] : []),
           { label: "Play again", cls: next ? "" : "big", run: restartLevel },
@@ -926,6 +1048,13 @@
       const hearts = "♥".repeat(Math.max(0, G.hearts)) + `<span class="gone">${"♥".repeat(Math.max(0, G.cfg.hearts - G.hearts))}</span>`;
       html = `<span class="lives">${hearts}</span><span class="coins">● ${G.coins}</span><span class="time">${fmtTime(G.time)}</span>${G.gotStar ? `<span class="stars">★</span>` : ""}`;
     }
+    // Power-ups that are switched on.
+    const on = [];
+    if (G.t < G.wandT) on.push(`Bubbles ${Math.ceil(G.wandT - G.t)}`);
+    if (G.t < G.sneakT) on.push(`Sneakers ${Math.ceil(G.sneakT - G.t)}`);
+    if (G.shield) on.push("Shield");
+    if (G.doubleJump) on.push("2× jump");
+    if (on.length) html += `<span class="powers">${on.join(" · ")}</span>`;
     if (html !== hudText) { scr.hud.innerHTML = html; hudText = html; }
   }
 
@@ -940,6 +1069,7 @@
     // Faint tower beams in the background.
     ctx.strokeStyle = "rgba(242,240,230,.05)"; ctx.lineWidth = 2;
     for (let c = 0; c <= L.cols; c += 3) { ctx.beginPath(); ctx.moveTo(c * s, r0 * s); ctx.lineTo(c * s, (r1 + 1) * s); ctx.stroke(); }
+    for (const l of G.lifts) drawLift(ctx, l, s);
     for (let r = r0; r <= r1; r++) for (let c = 0; c < L.cols; c++) drawTile(ctx, L.rows[r][c], c, r, s);
     if (G.mode === "level") {
       drawBandit(ctx, G.bandit, s);
@@ -947,6 +1077,14 @@
     }
     dustFx.draw(ctx);
     drawHero(ctx, G.hero, s);
+    // Bubbles from the bubble wand.
+    for (const b of G.bubbles) {
+      ctx.globalAlpha = Math.min(1, (1.6 - b.t) * 2);
+      ctx.strokeStyle = "#9fd3e8"; ctx.lineWidth = 2; ctx.fillStyle = "rgba(159,211,232,.18)";
+      ctx.beginPath(); ctx.arc(b.x * s, b.y * s, b.r * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.arc(b.x * s - b.r * s * 0.3, b.y * s - b.r * s * 0.3, b.r * s * 0.35, Math.PI, Math.PI * 1.5); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     // Floating points.
     ctx.textAlign = "center"; ctx.font = `${Math.round(s * 0.5)}px "Gochi Hand", cursive`;
     for (const p of G.popups) { ctx.globalAlpha = 1 - p.t / 0.9; ctx.fillStyle = "#f3d36b"; ctx.fillText(p.text, p.x * s, (p.y - p.t * 0.8) * s); }
@@ -985,7 +1123,29 @@
       ctx.strokeStyle = "rgba(38,61,48,.5)"; ctx.beginPath();
       ctx.moveTo(x, y0); ctx.lineTo(x + s, y1); ctx.lineTo(x + s, y1 + gh); ctx.lineTo(x, y0 + gh); ctx.closePath(); ctx.stroke();
     }
+    if (t === "{" || t === "}") {
+      // A conveyor belt: a gray belt with chevrons sliding the way it moves.
+      if (isClimb(below)) drawClimb(ctx, below, x, y, s, s);
+      const gh = s * 0.32, d = t === "}" ? 1 : -1;
+      ctx.fillStyle = "#8d998f"; ctx.fillRect(x, y, s, gh);
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, s, gh); ctx.clip();
+      ctx.strokeStyle = "#f2f0e6"; ctx.lineWidth = 1.5;
+      const shift = ((G.t * C.store.conveyorSpeed * d) % 0.5 + 0.5) % 0.5;
+      for (let k = -1; k < 3; k++) {
+        const cx = x + (k * 0.5 + shift) * s;
+        ctx.beginPath(); ctx.moveTo(cx - d * s * 0.08, y + gh * 0.2); ctx.lineTo(cx + d * s * 0.08, y + gh * 0.5); ctx.lineTo(cx - d * s * 0.08, y + gh * 0.8); ctx.stroke();
+      }
+      ctx.restore();
+      ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, gh - 1);
+    }
     const key = c + "," + r;
+    if (POWERS[t] && !G.taken.has(key)) {
+      // A floating power-up.
+      const cy = y + s / 2 + Math.sin(G.t * 3 + c) * s * 0.08;
+      ctx.fillStyle = "rgba(243,211,107,.18)"; ctx.strokeStyle = "rgba(243,211,107,.7)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x + s / 2, cy, s * 0.42, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      drawPowerIcon(ctx, POWERS[t].id, x + s / 2, cy, s * 0.7);
+    }
     if (t === "*" && !G.taken.has(key)) {
       const cx = x + s / 2, cy = y + s / 2 + Math.sin(G.t * 3 + c) * s * 0.06, rr = s * 0.32;
       ctx.fillStyle = "#f3d36b"; ctx.strokeStyle = "#8a5a34"; ctx.lineWidth = 1.5; ctx.beginPath();
@@ -1046,7 +1206,31 @@
     ctx.translate(x, y);
     ctx.rotate(z.spin);
     ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5;
-    if (z.kind === "ball") {
+    if (z.kind === "robot" || z.kind === "car") {
+      // Robots and cars don't roll: undo the spin, face the way they're going.
+      ctx.rotate(-z.spin);
+      const face = (z.state === "fall" ? Math.sign(z.vx) : 0) || z.dir;
+      ctx.scale(face < 0 ? -1 : 1, 1);
+      if (z.kind === "robot") {
+        // A wind-up robot: boxy body, little stepping legs, antenna, and a turning key on its back.
+        const step = Math.sin(z.t * 14) * r * 0.2, left = z.life - z.t;
+        ctx.fillStyle = "#c8cfc4";
+        ctx.fillRect(-r * 0.5, r * 0.55 + step, r * 0.3, r * 0.45); ctx.fillRect(r * 0.2, r * 0.55 - step, r * 0.3, r * 0.45);
+        ctx.fillStyle = HAZARD_COLORS[z.color];
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-r * 0.75, -r * 0.55, r * 1.5, r * 1.15, r * 0.2); else ctx.rect(-r * 0.75, -r * 0.55, r * 1.5, r * 1.15); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#c8cfc4"; ctx.beginPath(); ctx.rect(-r * 0.55, -r * 1.15, r * 1.1, r * 0.6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#263d30"; ctx.beginPath(); ctx.arc(r * 0.25, -r * 0.85, r * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, -r * 1.15); ctx.lineTo(0, -r * 1.45); ctx.stroke();
+        ctx.save(); ctx.translate(-r * 0.85, -r * 0.05); ctx.rotate(left < 2 ? 0 : z.t * 6);
+        ctx.strokeStyle = "#f3d36b"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, -r * 0.3); ctx.lineTo(0, r * 0.3); ctx.stroke(); ctx.restore();
+      } else {
+        // A toy race car.
+        ctx.fillStyle = HAZARD_COLORS[z.color];
+        ctx.beginPath(); ctx.moveTo(-r * 1.2, r * 0.6); ctx.lineTo(-r * 1.2, 0); ctx.lineTo(-r * 0.5, -r * 0.1); ctx.lineTo(-r * 0.2, -r * 0.6); ctx.lineTo(r * 0.5, -r * 0.6); ctx.lineTo(r * 0.8, -r * 0.05); ctx.lineTo(r * 1.25, r * 0.15); ctx.lineTo(r * 1.25, r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#9fd3e8"; ctx.fillRect(-r * 0.1, -r * 0.45, r * 0.5, r * 0.35);
+        for (const wx of [-0.65, 0.75]) { ctx.save(); ctx.translate(wx * r, r * 0.65); ctx.rotate(z.spin); ctx.fillStyle = "#263d30"; ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#c8cfc4"; ctx.beginPath(); ctx.moveTo(-r * 0.2, 0); ctx.lineTo(r * 0.2, 0); ctx.stroke(); ctx.restore(); }
+      }
+    } else if (z.kind === "ball") {
       ctx.fillStyle = HAZARD_COLORS[z.color]; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = "#f2f0e6"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, r * 0.62, -0.6, 0.9); ctx.stroke();
     } else {
@@ -1056,6 +1240,43 @@
       ctx.strokeStyle = "rgba(38,61,48,.6)"; ctx.beginPath(); ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
+  }
+
+  // A lift: guide rails up its shaft, and the platform riding up and down.
+  function drawLift(ctx, l, s) {
+    ctx.strokeStyle = "rgba(242,240,230,.18)"; ctx.lineWidth = 2;
+    for (const gx of [l.c + 0.08, l.c + l.w - 0.08]) { ctx.beginPath(); ctx.moveTo(gx * s, (l.top - 1) * s); ctx.lineTo(gx * s, (l.bottom + 0.3) * s); ctx.stroke(); }
+    const x = l.c * s, y = l.y * s, w = l.w * s, gh = s * 0.3;
+    ctx.fillStyle = "#f5a142"; ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5;
+    ctx.fillRect(x + 2, y, w - 4, gh); ctx.strokeRect(x + 2, y, w - 4, gh);
+    ctx.strokeStyle = "rgba(242,240,230,.5)"; ctx.beginPath(); ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y - s * 0.15); ctx.stroke();
+    // A little arrow showing which way it's going next.
+    ctx.fillStyle = "rgba(38,61,48,.7)"; const ay = y + gh / 2, d = l.dir;
+    ctx.beginPath(); ctx.moveTo(x + w * 0.2 - 4, ay - d * 3); ctx.lineTo(x + w * 0.2 + 4, ay - d * 3); ctx.lineTo(x + w * 0.2, ay + d * 3); ctx.fill();
+  }
+
+  // Power-up pictures (in the level, and on the Use button).
+  function drawPowerIcon(c, id, cx, cy, size) {
+    const u = size / 10;
+    c.save(); c.translate(cx, cy);
+    c.lineCap = "round"; c.lineJoin = "round"; c.lineWidth = Math.max(1.5, u * 0.6); c.strokeStyle = "#263d30";
+    if (id === "wand") {
+      c.strokeStyle = "#c9a26b"; c.lineWidth = Math.max(2, u * 0.9); c.beginPath(); c.moveTo(-3.5 * u, 3.5 * u); c.lineTo(0.5 * u, -0.5 * u); c.stroke();
+      c.strokeStyle = "#9fd3e8"; c.lineWidth = Math.max(1.5, u * 0.6); c.fillStyle = "rgba(159,211,232,.3)";
+      c.beginPath(); c.arc(1.8 * u, -1.8 * u, 1.6 * u, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.beginPath(); c.arc(3.6 * u, -3.8 * u, 0.8 * u, 0, Math.PI * 2); c.stroke();
+    } else if (id === "sneakers") {
+      c.fillStyle = "#f29a9a"; c.beginPath(); c.moveTo(-4 * u, 2.5 * u); c.lineTo(-4 * u, -1 * u); c.lineTo(-1 * u, -1 * u); c.lineTo(1 * u, 0.8 * u); c.lineTo(4 * u, 1.3 * u); c.lineTo(4 * u, 2.5 * u); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = "#f2f0e6"; c.fillRect(-4 * u, 2.5 * u, 8 * u, 0.9 * u);
+      c.strokeStyle = "#f3d36b"; c.beginPath(); c.moveTo(-1 * u, -1.5 * u); c.lineTo(-3 * u, -4 * u); c.moveTo(0.5 * u, -1 * u); c.lineTo(-0.5 * u, -3.8 * u); c.stroke();
+    } else if (id === "shield") {
+      c.fillStyle = "#9fd3e8"; c.beginPath(); c.moveTo(0, -4 * u); c.lineTo(3.5 * u, -2.8 * u); c.lineTo(3 * u, 1.5 * u); c.lineTo(0, 4 * u); c.lineTo(-3 * u, 1.5 * u); c.lineTo(-3.5 * u, -2.8 * u); c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = "#f2f0e6"; c.beginPath(); c.moveTo(0, -2.5 * u); c.lineTo(0, 2.5 * u); c.stroke();
+    } else {
+      c.strokeStyle = "#b8e986"; c.lineWidth = Math.max(2, u * 0.9);
+      for (const oy of [1.2, -1.8]) { c.beginPath(); c.moveTo(-3 * u, (oy + 1.8) * u); c.lineTo(0, oy * u); c.lineTo(3 * u, (oy + 1.8) * u); c.stroke(); }
+    }
+    c.restore();
   }
 
   // Bandit: a mischievous raccoon (never mean). Poses: idle, throw, wave, tongue, giggle, dance, caught, flee.
@@ -1182,6 +1403,16 @@
     ctx.beginPath(); ctx.moveTo(-hr * 0.8, headY - hr * 0.3); ctx.lineTo(-hr * 1.55, headY - hr * 0.05); ctx.stroke(); // the brim, pointing back
     if (!h.climb) { ctx.fillStyle = "#263d30"; ctx.beginPath(); ctx.arc(hr * 0.45, headY + hr * 0.05, hr * 0.14, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
+    // The shield power-up: a bubble around the hero until it blocks a bonk.
+    if (G.shield) {
+      ctx.strokeStyle = "rgba(159,211,232,.85)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(159,211,232,.12)";
+      ctx.beginPath(); ctx.arc(fx, fy - bh * 0.5, bh * 0.75 + Math.sin(G.t * 5) * 1.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    // Super sneakers: a few speed lines behind the hero.
+    if (G.t < G.sneakT && Math.abs(h.vx) > 1) {
+      ctx.strokeStyle = "rgba(243,211,107,.7)"; ctx.lineWidth = 2;
+      for (const k of [0.3, 0.55]) { ctx.beginPath(); ctx.moveTo(fx - h.face * bw * 0.6, fy - bh * k); ctx.lineTo(fx - h.face * bw * 1.3, fy - bh * k); ctx.stroke(); }
+    }
     // Dizzy after a bonk: little stars circling the head (never hurt, just dizzy).
     if (G.t < h.dizzyT) {
       ctx.fillStyle = "#f3d36b";

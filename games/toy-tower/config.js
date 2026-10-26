@@ -66,8 +66,25 @@ TT.CONFIG = {
     hitScale: 0.75,      // a toy's bump circle is this share of its drawn size, so close calls go your way
     ballRadius: 0.3,
     canRadius: 0.32,
+    robotRadius: 0.32,
+    carRadius: 0.3,
     bounce: 0.35,        // how high bouncy balls hop as they roll
-    gravity: 40          // how fast toys fall off the end of a ramp
+    gravity: 40,         // how fast toys fall off the end of a ramp
+    robotSpeed: 0.45,    // wind-up robots walk at this share of the level's toy speed...
+    robotLife: 14,       // ...and run down after about this many seconds
+    carSpeed: 1.25       // toy cars zoom at this share of the level's toy speed
+  },
+  store: {
+    conveyorSpeed: 1.8   // conveyor belts carry you (and toys) this fast
+  },
+  powerups: {
+    wandTime: 8,         // bubble wand: seconds of bubbles
+    bubbleEvery: 0.3,    // a new bubble this often
+    bubbleSpeed: 3.5,
+    sneakersTime: 10,    // super sneakers: seconds of...
+    sneakersRun: 1.35,   // ...faster running...
+    sneakersJump: 1.15,  // ...and higher jumps
+    doubleJump: 0.9      // the second jump's strength, as a share of a full jump
   },
   bonk: {
     dizzyTime: 0.6,      // after a bonk the hero is dizzy (can't move) this long...

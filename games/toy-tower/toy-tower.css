@@ -110,3 +110,13 @@
 .tt .tt-stars li span { display: inline-block; width: 1.4em; font-size: 1.3rem; color: rgba(242,240,230,.35); }
 .tt .tt-stars li.on { color: var(--chalk); }
 .tt .tt-stars li.on span { color: var(--yellow); }
+
+/* ---------- Power-ups ---------- */
+.tt .tt-use { display: grid; place-items: center; align-content: center; gap: 0; padding: 0; line-height: 1; }
+.tt .tt-use canvas { width: 44px; height: 44px; display: none; }
+.tt .tt-use.ready { border-color: var(--yellow); color: var(--yellow); background: color-mix(in srgb, var(--yellow) 18%, transparent); animation: tt-ready 1.2s ease-in-out infinite; }
+.tt .tt-use.ready canvas { display: block; }
+.tt .tt-use.ready span { font-size: .85rem; }
+@keyframes tt-ready { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .tt .tt-use.ready { animation: none; } }
+.tt .act-hud .powers { font-size: .9rem; color: var(--yellow); overflow: hidden; text-overflow: ellipsis; }
