@@ -23,7 +23,7 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
 - **Critter Crossing:** hop across roads, rivers and train tracks, in endless mode or 15 rescue missions, with four critters to pick from.
 - **Galaxy Defenders:** a space shooter with alien waves, bosses and an upgrade card after every wave, for 1 player or 2 as a team.
-- **Toy Tower** (in progress): a climbing platformer. So far it has the hero's running, jumping and climbing on one test level.
+- **Toy Tower** (in progress): a climbing platformer. Climb Bandit the raccoon's hideouts, dodge the toys he rolls down, and catch him to get your toys back. The first hideout, The Garage, is playable.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -101,7 +101,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
 | `games/critter-crossing/` | Critter Crossing (`missions.js` holds the 15 rescue missions) |
 | `games/galaxy-defenders/` | Galaxy Defenders |
-| `games/toy-tower/` | Toy Tower (`config.js` holds every movement number, `test-level.json` the test level) |
+| `games/toy-tower/` | Toy Tower (`config.js` holds every movement number, `garage.json` The Garage's levels, `test-level.json` the practice level) |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -140,6 +140,8 @@ Everything is saved in the browser's `localStorage` under keys starting with `ji
 - `critter-crossing:prefs`: each player's last critter and difficulty
 - `galaxy-defenders:sectors`: the furthest sector each player has reached on each level (team runs count too)
 - `galaxy-defenders:lastSetup` and `galaxy-defenders:coopLevel`: the last team and level for 2 players
+- `toy-tower:progress`: for each player, the levels unlocked, each level's stars, best time and best score on each difficulty, and the toys on their Toy Shelf
+- `toy-tower:prefs`: each player's last difficulty
 - `toy-tower:tune`: movement numbers changed in the tune panel (only used with `?tune`)
 
 The first time the arcade opens on a device that had the old stand-alone Hangman, it moves that app's `hm.*` data over:
@@ -426,7 +428,27 @@ Impossible's chain control:
 - **Daily twists:** aliens twice as fast but huge shots, surprise upgrades instead of cards, or a one-hit run with triple points. The twist plays at Medium.
 ## Toy Tower (in progress)
 
-Stage 1 is the hero's movement and controls on one test level. Bandit, hazards, hearts and the real levels come later.
+Bandit the raccoon (a prankster, never mean) swiped the kids' toys and hauled them to the top of his hideouts. Climb up, dodge the toys he rolls down, and catch him: he looks sheepish, hands that level's toy back, and scampers up to the next hideout. Done so far: the hero's movement and The Garage. Still to come: power-ups, The Toy Store, The Backyard, The Box Fort, the Treehouse showdown, and the level editor.
+
+- **The Garage (Ramp Run):** 3 levels (Workbench, Paint Shelves, Car Ramp) of sloped girders with ladders between them.
+  - Bandit rolls bouncy balls and paint cans down the ramps. They drop off the low end onto the ramp below, sometimes take a ladder down, and end up in the toy box at the bottom.
+  - Every level has a slow, safe route up the ladders and a riskier one (vines, ropes, coins next to where the toys fall).
+  - Every level has a hidden gold star on a high ledge, reached with a running jump over a gap.
+  - Jumping over a toy scores points.
+- **Hearts and checkpoints:** a bonk shows the hero dizzy for a moment (never hurt) and costs a heart, and so does falling off the bottom. Losing every heart sends you back to your last checkpoint flag with full hearts while Bandit does a silly dance. There's no game over.
+
+| Level | Hearts | Toys | Checkpoints |
+|---|---|---|---|
+| Easy | 3 | Slow, thrown less often | Yes |
+| Medium | 3 | Normal | Yes |
+| Hard | 2 | Quicker and more often | Yes |
+| Impossible | 1 | Fast and often | No |
+
+- **Stars:** each level has 3: catch Bandit, find the hidden star, and beat the target time. The level select shows them, and finishing a level unlocks the next.
+- **Score:** coins, toys jumped over, catching Bandit, the hidden star, and a bonus for each second under the target time. The high score (and the household top 5 for each level of difficulty) is the total of each player's best score on every level, so replaying a level to do better counts.
+- **Toy Shelf:** the 12 stolen toys (comic book, video game, crayons, movie, trading cards, toy robot, stuffed bear, kite, soccer ball, skateboard, puzzle, race-car set), with silhouettes for the ones still missing.
+- **Practice:** the original test level, with no Bandit, for trying out moves.
+- **Level files:** one JSON file per hideout (`games/toy-tower/garage.json`). Each level's rows are text, one character per tile: `.` empty, `=` flat girder, `>` and `<` girders sloping down to the right and left (a run of them is one ramp), `#` solid block, `H` ladder, `V` vine, `R` rope, `c` coin, `*` hidden star, `F` checkpoint, `T` toy box, `S` start, `B` Bandit. A level also sets its toy, target time, which toys Bandit throws, and his pace.
 
 - **Controls:** a strip under the tower, so thumbs never cover the action.
   - Left thumb: one big pad. Where the thumb sits sets the direction (8 ways), so it can roll between directions without lifting.
@@ -441,7 +463,7 @@ Stage 1 is the hero's movement and controls on one test level. Bandit, hazards, 
   - Down + Jump drops through a girder.
   - Wall slide and wall jump on walls and the sides of the tower.
   - Falls never hurt: landing shows a squash and a chalk-dust puff. Falling off the bottom goes back to the start for now.
-- **The test level** (`games/toy-tower/test-level.json`): girders, ladders, a vine, a rope, a two-wall chimney for wall jumps, a ledge to pull up onto, a high drop of more than 20 rows, and two stars. Rows are text, one character per tile: `.` empty, `=` girder, `#` solid block, `H` ladder, `V` vine, `R` rope, `*` star, `S` start.
+- **The practice level** (`games/toy-tower/test-level.json`): girders, ladders, a vine, a rope, a two-wall chimney for wall jumps, a ledge to pull up onto, a high drop of more than 20 rows, and two stars.
 - **Tuning:** every movement number is in `games/toy-tower/config.js`, with a comment on what it does. Open the arcade with `?tune` at the end of its address (for example `https://<your-username>.github.io/jimmys-arcade/?tune`) to get a **Tune** button with a slider for each number. Changes apply instantly and are kept on that device. **Copy** puts all the numbers on the clipboard, and **Reset** goes back to the file's numbers.
 ## Hangman multiplayer scoring
 

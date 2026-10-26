@@ -57,5 +57,21 @@ TT.CONFIG = {
   land: {
     squashTime: 0.14,    // the little squash when landing (falls never hurt)
     dustSpeed: 7         // landing faster than this makes a chalk-dust puff
+  },
+  girder: {
+    slope: 0.07,         // how much a ramp (a run of > or < girders) drops per tile
+    stepUp: 0.3          // walking up a ramp (or onto a slightly higher girder) follows the ground this far
+  },
+  hazards: {
+    hitScale: 0.75,      // a toy's bump circle is this share of its drawn size, so close calls go your way
+    ballRadius: 0.3,
+    canRadius: 0.32,
+    bounce: 0.35,        // how high bouncy balls hop as they roll
+    gravity: 40          // how fast toys fall off the end of a ramp
+  },
+  bonk: {
+    dizzyTime: 0.6,      // after a bonk the hero is dizzy (can't move) this long...
+    safeTime: 1.6,       // ...and blinks, safe from more bonks, this long
+    knockback: 3.5       // and gets bumped back this fast
   }
 };

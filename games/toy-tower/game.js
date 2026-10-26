@@ -1,8 +1,12 @@
-/* Toy Tower (stage 1): the hero's movement and controls on one test level. A climbing platformer on a tile
-   grid: girders you can jump up through, solid blocks, ladders, vines and ropes. All movement numbers are
-   in config.js (TT.CONFIG). Built on the shared action kit (Arcade.Action).
+/* Toy Tower: a climbing platformer. Bandit the raccoon swiped the kids' toys and hauled them to the top of
+   his hideouts; the hero climbs up (dodging the toys he rolls down) to catch him and get each toy back.
+   Built on a tile grid: girders you can jump up through (flat, or ramps that slope), solid blocks, ladders,
+   vines and ropes. All movement numbers are in config.js (TT.CONFIG); levels are in one JSON file per
+   hideout (garage.json). Built on the shared action kit (Arcade.Action).
    Opening the arcade with ?tune in its address adds a Tune panel with a slider for every number.
-   Saved data: toy-tower:tune (tuned numbers, only used with ?tune). */
+   Saved data: toy-tower:progress {playerId: {unlocked (levels open), levels {levelId: {stars (bits: 1 reached
+   Bandit, 2 hidden star, 4 beat the time), time (best seconds), score {difficulty: best}}}, shelf [item ids]}},
+   toy-tower:prefs {playerId: difficulty}, toy-tower:tune (only used with ?tune). Guests aren't recorded. */
 (function () {
   const A = window.Arcade, Act = A.Action, TT = window.TT;
   const $ = id => document.getElementById(id);
@@ -14,6 +18,29 @@
   const TUNING = /[?&]tune\b/.test(location.search);
   const EPS = 0.001;
 
+  // Hearts per life, how fast Bandit's toys roll (tiles/s), how often he throws (seconds), how often a toy
+  // takes a ladder down, how many toys can be out at once, and whether checkpoint flags work.
+  const DIFFS = {
+    easy: { name: "Easy", desc: "3 hearts, slow toys, checkpoints", hearts: 3, hazardSpeed: 2.3, throwEvery: 3.4, ladderChance: 0.15, maxHazards: 5, flags: true },
+    medium: { name: "Medium", desc: "3 hearts, checkpoints", hearts: 3, hazardSpeed: 2.9, throwEvery: 2.7, ladderChance: 0.25, maxHazards: 7, flags: true },
+    hard: { name: "Hard", desc: "2 hearts, quicker toys", hearts: 2, hazardSpeed: 3.5, throwEvery: 2.1, ladderChance: 0.35, maxHazards: 9, flags: true },
+    impossible: { name: "Impossible", desc: "1 heart, fast toys, no checkpoints", hearts: 1, hazardSpeed: 4.3, throwEvery: 1.6, ladderChance: 0.45, maxHazards: 12, flags: false }
+  };
+  // The toys Bandit swiped, one per level, in the order of the hideouts.
+  const ITEMS = [
+    { id: "comic", name: "Comic book" }, { id: "videogame", name: "Video game" }, { id: "crayons", name: "Crayons" },
+    { id: "movie", name: "Movie" }, { id: "cards", name: "Trading cards" }, { id: "robot", name: "Toy robot" },
+    { id: "bear", name: "Stuffed bear" }, { id: "kite", name: "Kite" }, { id: "soccer", name: "Soccer ball" },
+    { id: "skateboard", name: "Skateboard" }, { id: "puzzle", name: "Puzzle" }, { id: "racecars", name: "Race-car set" }
+  ];
+  const HIDEOUTS = [
+    { id: "garage", name: "The Garage", sub: "Ramp Run", file: "games/toy-tower/garage.json" },
+    { id: "store", name: "The Toy Store", sub: "Conveyor Chaos" },
+    { id: "backyard", name: "The Backyard", sub: "Vine Swing" },
+    { id: "fort", name: "The Box Fort", sub: "Tape Trouble" }
+  ];
+  const POINTS = { coin: 10, jumpOver: 50, reach: 200, star: 500, perSecond: 10 };
+
   // Tuned numbers from the ?tune panel are kept on this device (only used with ?tune).
   function deepAssign(dst, src) {
     for (const k of Object.keys(src || {})) {
@@ -23,60 +50,167 @@
   }
   if (TUNING) deepAssign(C, A.store.get("toy-tower:tune", {}));
 
-  /* ---------- Menu ---------- */
+  /* ---------- Saved progress ---------- */
+  let progress = A.store.get("toy-tower:progress", {});
+  let prefs = A.store.get("toy-tower:prefs", {});
+  const saveProgress = () => A.store.set("toy-tower:progress", progress);
+  let guestProgress = null;
+  function progOf(p) {
+    const blank = () => ({ unlocked: 1, levels: {}, shelf: [] });
+    if (!p || !p.id) return guestProgress || (guestProgress = blank());
+    return progress[p.id] || (progress[p.id] = blank());
+  }
+  const diffOf = p => (p && p.id ? prefs[p.id] : guestDiff) || "easy";
+  let guestDiff = "easy";
+  function setDiff(p, d) { if (p && p.id) { prefs[p.id] = d; A.store.set("toy-tower:prefs", prefs); } else guestDiff = d; }
+  const starCount = mask => (mask & 1 ? 1 : 0) + (mask & 2 ? 1 : 0) + (mask & 4 ? 1 : 0);
+  const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  /* ---------- Screens ---------- */
   const home = `<button class="icon-btn" data-home aria-label="Home"></button>`;
+  const back = `<button class="back-link" data-tt-back>‹ Toy Tower</button>`;
+  const seg = (id, items) => `<div class="seg" role="radiogroup" id="${id}">${items.map(([v, label]) => `<button type="button" role="radio" data-v="${v}">${label}</button>`).join("")}</div>`;
+  const diffItems = Object.entries(DIFFS).map(([k, d]) => [k, d.name]);
   $("game-root").insertAdjacentHTML("beforeend", `
   <section class="screen tt menu" id="tt-menu" hidden>
     <header class="topbar"><div class="tb-left">${home}</div><h2></h2><div class="tb-right"></div></header>
     <h1 class="title">Toy <span>Tower</span></h1>
     <p class="tagline">Bandit the raccoon swiped your toys. Climb up and get them back!</p>
     <div class="menu-buttons">
-      <button class="btn big" id="tt-btn-test">Test level</button>
+      <button class="btn big" id="tt-btn-play">Play</button>
+      <button class="btn" id="tt-btn-shelf">Toy Shelf</button>
+      <button class="btn ghost" id="tt-btn-top">Top scores</button>
+      <button class="btn ghost" id="tt-btn-test">Practice</button>
     </div>
-    <p class="note center-text">Bandit's hideouts are coming soon. For now, try out the running, jumping and climbing.</p>
+  </section>
+
+  <section class="screen tt" id="tt-levels" hidden>
+    <header class="topbar"><div class="tb-left">${home}${back}</div><h2>Pick a level</h2><div class="tb-right"></div></header>
+    <div class="playing-as" id="tt-playing-as"></div>
+    ${seg("tt-diff", diffItems)}
+    <p class="note center-text" id="tt-diff-note"></p>
+    <div id="tt-hideouts"></div>
+  </section>
+
+  <section class="screen tt" id="tt-shelf" hidden>
+    <header class="topbar"><div class="tb-left">${home}${back}</div><h2>Toy Shelf</h2><div class="tb-right"></div></header>
+    <p class="note center-text" id="tt-shelf-note"></p>
+    <div class="tt-shelf" id="tt-shelf-grid"></div>
+  </section>
+
+  <section class="screen tt" id="tt-top" hidden>
+    <header class="topbar"><div class="tb-left">${home}${back}</div><h2>Top scores</h2><div class="tb-right"></div></header>
+    ${seg("tt-top-level", diffItems)}
+    <div id="tt-top-list"></div>
   </section>`);
 
   const scr = Act.createScreen({
     id: "tt-play", cls: "tt",
-    onRestart: () => startLevel(),
+    onRestart: () => restartLevel(),
     onQuit: () => A.goHome(),
     onResize: () => { if (G) layout(); }
   });
 
+  function paintSeg(id, value) { $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === String(value)))); }
   function showMenu() { A.setAccent(ACCENT); A.show("tt-menu"); }
-  $("tt-btn-test").addEventListener("click", () => A.whoIsPlaying({ onDone: startLevel, onBack: showMenu, backLabel: "Toy Tower" }));
+  document.querySelectorAll("[data-tt-back]").forEach(b => b.addEventListener("click", showMenu));
+  $("tt-btn-play").addEventListener("click", () => A.whoIsPlaying({ onDone: showLevels, onBack: showMenu, backLabel: "Toy Tower" }));
+  $("tt-btn-shelf").addEventListener("click", () => A.whoIsPlaying({ onDone: showShelf, onBack: showMenu, backLabel: "Toy Tower" }));
+  $("tt-btn-top").addEventListener("click", () => showTop("easy"));
+  $("tt-btn-test").addEventListener("click", () => A.whoIsPlaying({ onDone: startPractice, onBack: showMenu, backLabel: "Toy Tower" }));
 
-  /* ---------- Level ---------- */
-  let LEVEL = null;
-  async function loadLevel() {
-    if (LEVEL) return LEVEL;
+  /* ---------- Level data ---------- */
+  const hideoutData = {};
+  async function loadHideout(h) {
+    if (!h.file) return null;
+    if (hideoutData[h.id]) return hideoutData[h.id];
+    const res = await fetch(h.file);
+    if (!res.ok) throw new Error(h.file + " " + res.status);
+    return (hideoutData[h.id] = await res.json());
+  }
+  let PRACTICE = null;
+  async function loadPractice() {
+    if (PRACTICE) return PRACTICE;
     const res = await fetch("games/toy-tower/test-level.json");
     if (!res.ok) throw new Error("test-level.json " + res.status);
-    const data = await res.json();
-    const cols = Math.max(...data.rows.map(r => r.length));
-    LEVEL = { name: data.name, cols, rows: data.rows.map(r => r.padEnd(cols, ".")) };
-    return LEVEL;
+    return (PRACTICE = await res.json());
+  }
+  // All campaign levels in order: [{hideout, index (in the whole campaign), def}].
+  async function campaign() {
+    const out = [];
+    for (const h of HIDEOUTS) {
+      let data = null;
+      try { data = await loadHideout(h); } catch (err) { data = null; }
+      if (data) data.levels.forEach(def => out.push({ hideout: h, index: out.length, def }));
+    }
+    return out;
+  }
+
+  // Turn a level's rows into what the game uses, with the height of every ramp tile worked out.
+  function parseLevel(def) {
+    const cols = Math.max(...def.rows.map(r => r.length));
+    const rows = def.rows.map(r => r.padEnd(cols, "."));
+    const offs = rows.map(() => new Array(cols).fill(null));
+    rows.forEach((row, r) => {
+      for (let c = 0; c < cols;) {
+        const ch = row[c];
+        if (ch !== ">" && ch !== "<") { if (ch === "=") offs[r][c] = [0, 0]; c++; continue; }
+        let end = c;
+        while (end + 1 < cols && row[end + 1] === ch) end++;
+        for (let k = c; k <= end; k++) {
+          // ">" drops toward the right, "<" toward the left; the top of each tile is offset this much.
+          offs[r][k] = ch === ">" ? [(k - c) * C.girder.slope, (k - c + 1) * C.girder.slope] : [(end + 1 - k) * C.girder.slope, (end - k) * C.girder.slope];
+        }
+        c = end + 1;
+      }
+    });
+    const L = { def, name: def.name, cols, rows, offs, start: null, bandit: null, flags: [] };
+    rows.forEach((row, r) => [...row].forEach((ch, c) => {
+      if (ch === "S") L.start = { c, r };
+      if (ch === "B") L.bandit = { c, r };
+      if (ch === "F") L.flags.push({ c, r });
+    }));
+    return L;
   }
 
   /* ---------- Game state ----------
-     G: { level, stars Set("c,r"), starsTotal, start {x, y}, hero, camY, t }
-     hero: { x (middle), y (feet), vx, vy, onGround, climb {c, top, bottom, kind} | null, face, coyoteT, bufferT,
-             jumping, wall (-1, 0, 1: touching a wall on that side), wallT, lastWall, lockT, regrabT, dropT,
-             landT, slideV, runPhase } */
+     G: { mode ("level" | "practice"), L (parsed level), entry (campaign entry), diff, cfg, player, hero,
+          hazards, popups, bandit, camY, t, time, coins, jumps, gotStar, taken Set("c,r"), hearts, livesLost,
+          checkpoint {x, y}, state ("play" | "lost" | "caught" | "done"), stateT }
+     hero: { x (middle), y (feet), vx, vy, onGround, climb {c, top, topY, bottomY, kind} | null, face, coyoteT,
+             bufferT, jumping, wall, wallT, lastWall, lockT, regrabT, dropT, landT, slideV, runPhase, dizzyT, safeT }
+     hazard: { kind ("ball" | "can"), x, y (bottom), r, row, dir, state ("roll" | "fall" | "ladder"), vx, vy,
+               bottomY, bottomRow, t, decided Set, jumped } */
   let G = null;
-  const dustFx = Act.dust(60);
+  const dustFx = Act.dust(70);
   const F = {};
 
-  async function startLevel() {
-    let level;
-    try { level = await loadLevel(); } catch (err) { A.toast("Couldn't load the level. Try again."); return; }
-    G = { level, stars: new Set(), starsTotal: 0, t: 0, camY: 0, player: A.session.player };
-    level.rows.forEach((row, r) => [...row].forEach((ch, c) => {
-      if (ch === "S") G.start = { x: c + 0.5, y: r + 1 };
-      if (ch === "*") G.starsTotal++;
-    }));
-    G.got = new Set();
+  async function startLevel(entry, diff) {
+    const player = A.session.player;
+    G = {
+      mode: "level", entry, L: parseLevel(entry.def), diff, cfg: DIFFS[diff], player,
+      hazards: [], popups: [], t: 0, time: 0, coins: 0, jumps: 0, gotStar: false, taken: new Set(),
+      hearts: DIFFS[diff].hearts, livesLost: 0, state: "play", stateT: 0, camY: 0
+    };
+    G.checkpoint = spotAbove(G.L.start.c, G.L.start.r);
+    const b = G.L.bandit;
+    const bspot = spotAbove(b.c, b.r);
+    const bt = tileAt(b.c, b.r + 1);
+    G.bandit = { x: bspot.x, y: bspot.y, row: b.r + 1, dir: bt === ">" ? 1 : bt === "<" ? -1 : (b.c < G.L.cols / 2 ? 1 : -1),
+      throwT: 2, pose: "idle", poseT: 0, tauntT: 4 };
+    begin();
+  }
+  async function startPractice() {
+    let def;
+    try { def = await loadPractice(); } catch (err) { A.toast("Couldn't load the practice level. Try again."); return; }
+    G = { mode: "practice", L: parseLevel(def), player: A.session.player, hazards: [], popups: [], t: 0, time: 0,
+      coins: 0, jumps: 0, gotStar: false, taken: new Set(), hearts: 0, livesLost: 0, state: "play", stateT: 0, camY: 0 };
+    G.checkpoint = spotAbove(G.L.start.c, G.L.start.r);
+    begin();
+  }
+  function begin() {
     makeAvatarImage(G.player);
+    dustFx.clear();
     respawn();
     A.setAccent(ACCENT);
     scr.show();
@@ -86,26 +220,43 @@
       updateHud();
     });
   }
+  function restartLevel() {
+    if (!G) return;
+    if (G.mode === "practice") startPractice(); else startLevel(G.entry, G.diff);
+  }
+  // Where someone standing in tile (c, r) has their feet: on the girder or block below it.
+  function spotAbove(c, r) {
+    const x = c + 0.5, s = surfaceTop(c, r + 1, x);
+    return { x, y: s == null ? r + 1 : s };
+  }
   function respawn() {
     G.hero = {
-      x: G.start.x, y: G.start.y, vx: 0, vy: 0, onGround: true, climb: null, face: 1, coyoteT: 0, bufferT: 0, jumping: false,
-      wall: 0, wallT: 0, lastWall: 0, lockT: 0, regrabT: 0, dropT: 0, landT: 0, slideV: 0, runPhase: 0
+      x: G.checkpoint.x, y: G.checkpoint.y, vx: 0, vy: 0, onGround: true, climb: null, face: 1, coyoteT: 0, bufferT: 0, jumping: false,
+      wall: 0, wallT: 0, lastWall: 0, lockT: 0, regrabT: 0, dropT: 0, landT: 0, slideV: 0, runPhase: 0, dizzyT: 0, safeT: 0
     };
   }
 
   /* ---------- Tiles ---------- */
   const tileAt = (c, r) => {
-    const L = G.level;
+    const L = G.L;
     if (c < 0 || c >= L.cols) return "#";          // the sides of the tower are walls
     if (r < 0 || r >= L.rows.length) return ".";    // open above the top and below the bottom
     return L.rows[r][c];
   };
   const solid = (c, r) => tileAt(c, r) === "#";
-  const platform = (c, r) => tileAt(c, r) === "=";
+  const plat = (c, r) => { const t = tileAt(c, r); return t === "=" || t === ">" || t === "<"; };
   const isClimb = t => t === "H" || t === "V" || t === "R";
   // A girder with a ladder (or vine, or rope) under it is climbable too, so you can climb up onto it.
-  const climbable = (c, r) => isClimb(tileAt(c, r)) || (platform(c, r) && isClimb(tileAt(c, r + 1)));
+  const climbable = (c, r) => isClimb(tileAt(c, r)) || (plat(c, r) && isClimb(tileAt(c, r + 1)));
   const climbKind = (c, r) => (isClimb(tileAt(c, r)) ? tileAt(c, r) : tileAt(c, r + 1));
+  // The top of a girder at x (ramps slope), or of a solid block with open space above it; null otherwise.
+  function surfaceTop(c, r, x) {
+    if (solid(c, r)) return solid(c, r - 1) ? null : r;
+    if (!plat(c, r)) return null;
+    const o = G.L.offs[r][c], f = Math.max(0, Math.min(1, x - c));
+    return r + o[0] + (o[1] - o[0]) * f;
+  }
+  const downhill = (c, r) => (tileAt(c, r) === ">" ? 1 : tileAt(c, r) === "<" ? -1 : 0);
 
   /* ---------- Input: the pad, Jump and Use buttons, and the keyboard ---------- */
   scr.controls.innerHTML = `
@@ -168,24 +319,42 @@
     if (e.key === " ") releaseJump();
   });
 
-  /* ---------- Movement ---------- */
+  /* ---------- Update ---------- */
   const approach = (v, target, step) => (v < target ? Math.min(target, v + step) : Math.max(target, v - step));
   const hw = () => C.hero.width / 2, hh = () => C.hero.height;
   const colsUnder = h => [Math.floor(h.x - hw() + EPS), Math.floor(h.x + hw() - EPS)];
+  const NO_INPUT = { left: false, right: false, up: false, down: false };
 
   function update(dt) {
     G.t += dt;
-    const h = G.hero, inp = input();
-    for (const k of ["coyoteT", "bufferT", "wallT", "lockT", "regrabT", "dropT", "landT"]) if (h[k] > 0) h[k] -= dt;
-    if (h.climb) updateClimb(h, inp, dt); else updateMove(h, inp, dt);
-    collectStars(h);
-    // Falling off the bottom: back to the start (hearts come later).
-    if (h.y - hh() > G.level.rows.length + 1) { scr.message("Whoops! Back to the start", 1000); respawn(); G.camY = camTarget(); }
+    G.stateT += dt;
+    const h = G.hero;
+    if (G.state === "play" || G.state === "lost") {
+      if (G.state === "play") G.time += dt;
+      for (const k of ["coyoteT", "bufferT", "wallT", "lockT", "regrabT", "dropT", "landT"]) if (h[k] > 0) h[k] -= dt;
+      const inp = G.state === "play" && G.t >= h.dizzyT ? input() : NO_INPUT;
+      if (h.climb) updateClimb(h, inp, dt); else updateMove(h, inp, dt);
+      if (G.state === "play") {
+        collect(h);
+        if (G.mode === "level") { touchFlags(h); hitHazards(h); reachBandit(h); }
+        // Falling off the bottom.
+        if (h.y - hh() > G.L.rows.length + 1) fellOff();
+      }
+      // After a lost life: back to the last flag (or the start) with full hearts and a clear tower.
+      if (G.state === "lost" && G.stateT > 1.3) { G.state = "play"; G.hearts = G.cfg.hearts; G.hazards = []; respawn(); G.hero.safeT = G.t + C.bonk.safeTime; snapCamera(); }
+    } else if (G.state === "caught") {
+      if (G.stateT > 2.6) finishLevel();
+    }
+    if (G.mode === "level") { updateBandit(dt); for (const z of G.hazards.slice()) updateHazard(z, dt); }
+    for (const p of G.popups) p.t += dt;
+    G.popups = G.popups.filter(p => p.t < 0.9);
     const target = camTarget();
     G.camY += (target - G.camY) * Math.min(1, dt * 6);
     dustFx.update(dt);
+    updateHud();
   }
 
+  /* ---------- Movement ---------- */
   function updateMove(h, inp, dt) {
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     if (dir) h.face = dir;
@@ -197,18 +366,19 @@
     h.vx = approach(h.vx, dir * max, accel * dt);
 
     // Jumping: from the ground (or just after leaving it), or off a wall.
+    let jumped = false;
     if (h.bufferT > 0) {
       if (ground || h.coyoteT > 0) {
         if (inp.down && ground && standingOnGirderOnly(h)) {
           // Down + Jump on a girder drops through it.
           h.dropT = 0.2; h.y += 0.02; h.onGround = false; h.bufferT = 0;
         } else {
-          h.vy = -C.jump.speed; h.jumping = true; h.onGround = false; h.coyoteT = 0; h.bufferT = 0;
+          h.vy = -C.jump.speed; h.jumping = true; h.onGround = false; h.coyoteT = 0; h.bufferT = 0; jumped = true;
         }
       } else if (h.wall || h.wallT > 0) {
         const away = -(h.wall || h.lastWall);
         h.vx = away * C.wall.jumpX; h.vy = -C.wall.jumpY; h.face = away;
-        h.lockT = C.wall.lockTime; h.jumping = true; h.bufferT = 0; h.wallT = 0;
+        h.lockT = C.wall.lockTime; h.jumping = true; h.bufferT = 0; h.wallT = 0; jumped = true;
         dustFx.emit(px(h.x - away * hw()), px(h.y - hh() / 2), "#f2f0e6", 4);
       }
     }
@@ -225,11 +395,16 @@
     const fallSpeed = h.vy, wasGround = h.onGround;
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(h.vx), Math.abs(h.vy)) * dt / 0.2));
     h.wall = 0;
-    for (let i = 0; i < steps; i++) { moveX(h, h.vx * dt / steps, dir); moveY(h, h.vy * dt / steps, dir); }
+    for (let i = 0; i < steps; i++) { moveX(h, h.vx * dt / steps); moveY(h, h.vy * dt / steps, dir); }
 
-    h.onGround = supported(h);
+    // Walking along a ramp (up or down) keeps the feet on it.
+    if (wasGround && !jumped && h.vy >= 0 && h.dropT <= 0) {
+      const s = groundBetween(h, h.y - C.girder.stepUp, h.y + 0.35);
+      if (s != null) { h.y = s; h.vy = 0; }
+    }
+    h.onGround = h.vy >= 0 && groundBetween(h, h.y - 0.02, h.y + 0.02) != null;
     if (h.onGround && !wasGround) landed(h, fallSpeed);
-    if (wasGround && !h.onGround && h.vy >= 0) h.coyoteT = C.jump.coyoteTime; // walked off a ledge
+    if (wasGround && !h.onGround && !jumped) h.coyoteT = C.jump.coyoteTime; // walked off a ledge
     // Touching a wall (in the air): wall jumps and wall slides.
     if (!h.onGround) {
       for (const side of [-1, 1]) if (wallAt(h, side)) h.wall = side;
@@ -240,18 +415,29 @@
     tryGrab(h, inp);
   }
 
-  function standingOnGirderOnly(h) {
-    const r = Math.round(h.y), [c0, c1] = colsUnder(h);
-    let girder = false;
-    for (let c = c0; c <= c1; c++) { if (solid(c, r)) return false; if (platform(c, r)) girder = true; }
-    return girder;
-  }
-  function supported(h) {
-    const r = Math.round(h.y);
-    if (Math.abs(h.y - r) > 0.01 || h.vy < 0) return false;
+  // The highest surface under the hero's feet between yFrom and yTo (girders count unless dropping through).
+  function groundBetween(h, yFrom, yTo) {
     const [c0, c1] = colsUnder(h);
-    for (let c = c0; c <= c1; c++) if (solid(c, r) || (platform(c, r) && h.dropT <= 0)) return true;
-    return false;
+    let best = null;
+    for (let r = Math.floor(yFrom) - 1; r <= Math.floor(yTo); r++) {
+      for (let c = c0; c <= c1; c++) {
+        if (plat(c, r) && h.dropT > 0) continue;
+        const s = surfaceTop(c, r, Math.max(c, Math.min(c + 1, h.x)));
+        if (s != null && s >= yFrom - EPS && s <= yTo + EPS && (best == null || s < best)) best = s;
+      }
+    }
+    return best;
+  }
+  function standingOnGirderOnly(h) {
+    const [c0, c1] = colsUnder(h);
+    let girder = false;
+    for (let r = Math.floor(h.y) - 1; r <= Math.floor(h.y); r++) for (let c = c0; c <= c1; c++) {
+      const s = surfaceTop(c, r, Math.max(c, Math.min(c + 1, h.x)));
+      if (s == null || Math.abs(s - h.y) > 0.03) continue;
+      if (solid(c, r)) return false;
+      girder = true;
+    }
+    return girder;
   }
   function wallAt(h, side) {
     const x = side > 0 ? h.x + hw() + 0.04 : h.x - hw() - 0.04;
@@ -281,10 +467,13 @@
     let top = null;
     for (let r = r0; r <= r1; r++) if (solid(c, r)) { top = r; break; }
     if (top == null) {
-      // Ledge forgiveness on girders too: moving into a girder whose top is just above your feet pulls you up onto it.
-      const r = Math.floor(h.y - EPS);
-      if (!h.onGround && h.dropT <= 0 && h.vy > -2 && platform(c, r) && h.y - r <= C.ledge.pullUp && boxFree(h.x, r)) {
-        h.y = r; h.vy = 0; h.onGround = true; h.jumping = false;
+      // Ledge forgiveness on girders: moving into a girder whose top is just above your feet pulls you up onto it.
+      if (!h.onGround && h.dropT <= 0 && h.vy > -2) {
+        for (let r = Math.floor(h.y - C.ledge.pullUp - EPS); r <= Math.floor(h.y); r++) {
+          if (!plat(c, r)) continue;
+          const s = surfaceTop(c, r, Math.max(c, Math.min(c + 1, h.x)));
+          if (s < h.y && h.y - s <= C.ledge.pullUp && boxFree(h.x, s)) { h.y = s; h.vy = 0; h.onGround = true; h.jumping = false; return; }
+        }
       }
       return;
     }
@@ -303,20 +492,20 @@
     const [c0, c1] = colsUnder(h);
     if (dy > 0) {
       const ny = h.y + dy;
-      for (let r = Math.ceil(h.y - EPS); r <= Math.floor(ny); r++) {
-        for (let c = c0; c <= c1; c++) {
-          if (solid(c, r) || (platform(c, r) && h.dropT <= 0)) { h.y = r; h.vy = 0; return; }
-        }
-        // Ledge forgiveness: just past the end of a platform, moving toward it, still lands on it.
-        for (const side of [-1, 1]) {
-          if (side !== dir && side !== Math.sign(h.vx)) continue;
-          const c = Math.floor(side > 0 ? h.x + hw() + C.ledge.edgeReach - EPS : h.x - hw() - C.ledge.edgeReach + EPS);
-          if (c >= c0 && c <= c1) continue;
-          const top = solid(c, r) && !solid(c, r - 1);
-          if (!(top || (platform(c, r) && h.dropT <= 0))) continue;
+      const s = groundBetween(h, h.y, ny);
+      if (s != null) { h.y = s; h.vy = 0; return; }
+      // Ledge forgiveness: just past the end of a platform, moving toward it, still lands on it.
+      for (const side of [-1, 1]) {
+        if (side !== dir && side !== Math.sign(h.vx)) continue;
+        const c = Math.floor(side > 0 ? h.x + hw() + C.ledge.edgeReach - EPS : h.x - hw() - C.ledge.edgeReach + EPS);
+        if (c >= c0 && c <= c1) continue;
+        for (let r = Math.floor(h.y) - 1; r <= Math.floor(ny); r++) {
+          if (plat(c, r) && h.dropT > 0) continue;
+          const top = surfaceTop(c, r, side > 0 ? c : c + 1);
+          if (top == null || top < h.y - EPS || top > ny) continue;
           const x = side > 0 ? c + 0.08 - hw() : c + 1 - 0.08 + hw();
-          if (!boxFree(x, r)) continue;
-          h.x = x; h.y = r; h.vy = 0;
+          if (!boxFree(x, top)) continue;
+          h.x = x; h.y = top; h.vy = 0;
           return;
         }
       }
@@ -350,20 +539,26 @@
     return best;
   }
   function tryGrab(h, inp) {
-    if (h.regrabT > 0) return;
+    if (h.regrabT > 0 || G.state !== "play") return;
     let hit = null;
-    if (inp.up) hit = climbNear(h, [Math.floor(h.y - hh() * 0.5), Math.floor(h.y - 0.05)]);
-    else if (inp.down && h.onGround) hit = climbNear(h, [Math.round(h.y)]);                      // standing on top of a ladder
+    const footRow = Math.floor(h.y + 0.05);
+    // With Up, a ladder anywhere along the body counts: on a ramp the girder's top sits a little below the
+    // ladder's last rung, so only the head may be next to the ladder.
+    if (inp.up) hit = climbNear(h, [Math.floor(h.y - hh() * 0.5), Math.floor(h.y - 0.05), Math.floor(h.y - hh() + 0.1)]);
+    else if (inp.down && h.onGround) hit = climbNear(h, [footRow]);                                              // standing on top of a ladder
     else if (!h.onGround && C.climb.autoGrab && !inp.down) hit = climbNear(h, [Math.floor(h.y - hh() * 0.5)]); // jumping into one
     if (!hit) return;
-    if (inp.up && h.onGround && !climbable(hit.c, Math.floor(h.y - hh() * 0.5)) && !climbable(hit.c, Math.floor(h.y - 0.05))) return;
     let top = hit.r, bottom = hit.r;
     while (climbable(hit.c, top - 1)) top--;
     while (climbable(hit.c, bottom + 1)) bottom++;
-    if (inp.down && h.onGround) { if (Math.round(h.y) !== top) return; h.y += 0.05; } // step down onto the ladder
-    else if (inp.up && h.onGround && Math.round(h.y) <= top) return;                    // already at the top
-    h.climb = { c: hit.c, top, bottom: bottom + 1, kind: climbKind(hit.c, hit.r) };
-    h.y = Math.min(h.y, h.climb.bottom); // grabbed the end of a rope with feet hanging below it: hang from the end
+    const cx = hit.c + 0.5;
+    const topY = plat(hit.c, top) ? surfaceTop(hit.c, top, cx) : top;
+    const below = surfaceTop(hit.c, bottom + 1, cx);
+    const bottomY = below == null ? bottom + 1 : below;
+    if (inp.down && h.onGround) { if (hit.r !== top || !plat(hit.c, top)) return; h.y += 0.05; } // step down onto the ladder
+    else if (inp.up && h.onGround && h.y <= topY + 0.05) return;                                  // already at the top
+    h.climb = { c: hit.c, top, topY, bottomY, kind: climbKind(hit.c, hit.r) };
+    h.y = Math.min(h.y, bottomY); // grabbed the end of a rope with feet hanging below it: hang from the end
     h.vx = 0; h.vy = 0; h.onGround = false; h.jumping = false; h.slideV = C.climb.downSpeed;
   }
   function updateClimb(h, inp, dt) {
@@ -386,66 +581,358 @@
     else if (inp.down) { h.slideV = approach(h.slideV, C.climb.slideSpeed, C.climb.slideAccel * dt); h.vy = h.slideV; } // hold to slide fast
     else { h.vy = 0; h.slideV = C.climb.downSpeed; }
     const ny = h.y + h.vy * dt;
-    if (ny <= cl.top) {
+    if (ny <= cl.topY) {
       // Reached the top: step off onto the girder there (if there is one).
-      h.y = cl.top;
-      const [c0, c1] = colsUnder(h);
-      let floor = false;
-      for (let c = c0; c <= c1; c++) if (solid(c, cl.top) || platform(c, cl.top)) floor = true;
-      if (floor) { h.climb = null; h.vy = 0; h.onGround = true; }
+      h.y = cl.topY;
+      if (plat(cl.c, cl.top) || solid(cl.c, cl.top)) { h.climb = null; h.vy = 0; h.onGround = true; }
       return;
     }
-    if (h.vy > 0 && ny >= cl.bottom) {
+    if (h.vy > 0 && ny >= cl.bottomY) {
       // Reached the bottom: stand on the ground there, or drop off the end of a rope or vine.
       h.climb = null;
-      h.y = cl.bottom;
-      h.onGround = supported(h);
+      h.y = cl.bottomY;
+      h.onGround = groundBetween(h, h.y - 0.02, h.y + 0.02) != null;
       if (h.onGround) { landed(h, h.vy); h.vy = 0; } else { h.regrabT = C.climb.regrabDelay; }
       return;
     }
     h.y = ny;
-    // Walking off at the bottom with left or right.
-    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
-    if (dir && !inp.up && !inp.down && Math.abs(h.y - cl.bottom) < 0.05) { h.climb = null; h.face = dir; }
   }
 
-  function collectStars(h) {
+  /* ---------- Coins, stars, flags ---------- */
+  function overlapTiles(h, fn) {
     const c0 = Math.floor(h.x - hw()), c1 = Math.floor(h.x + hw()), r0 = Math.floor(h.y - hh()), r1 = Math.floor(h.y - EPS);
-    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-      if (tileAt(c, r) !== "*" || G.got.has(c + "," + r)) continue;
-      G.got.add(c + "," + r);
-      A.sfx.win();
-      dustFx.emit(px(c + 0.5), px(r + 0.5), "#f3d36b", 12);
-      scr.message(G.got.size === G.starsTotal ? "All the stars!" : "Star!", 900);
-      updateHud();
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) fn(c, r, tileAt(c, r));
+  }
+  function collect(h) {
+    overlapTiles(h, (c, r, t) => {
+      const key = c + "," + r;
+      if ((t !== "*" && t !== "c") || G.taken.has(key)) return;
+      G.taken.add(key);
+      if (t === "c") {
+        G.coins++;
+        A.sfx.right();
+        dustFx.emit(px(c + 0.5), px(r + 0.5), "#f3d36b", 6);
+        popup("+" + POINTS.coin, c + 0.5, r + 0.3);
+      } else {
+        G.gotStar = true;
+        A.sfx.win();
+        dustFx.emit(px(c + 0.5), px(r + 0.5), "#f3d36b", 14);
+        scr.message(G.mode === "practice" ? "Star!" : "Hidden star!", 1000);
+      }
+    });
+  }
+  function touchFlags(h) {
+    if (!G.cfg.flags) return;
+    overlapTiles(h, (c, r, t) => {
+      if (t !== "F") return;
+      const spot = spotAbove(c, r);
+      if (G.checkpoint.c === c && G.checkpoint.r === r) return;
+      G.checkpoint = { x: spot.x, y: spot.y, c, r };
+      A.sfx.right();
+      scr.message("Checkpoint!", 900);
+    });
+  }
+  function popup(text, x, y) { G.popups.push({ text, x, y, t: 0 }); }
+
+  /* ---------- Bonks, hearts and lives ---------- */
+  function bonk(h, fromX) {
+    if (G.t < h.safeT || G.state !== "play") return;
+    G.hearts--;
+    A.sfx.wrong(); A.buzz();
+    h.dizzyT = G.t + C.bonk.dizzyTime; h.safeT = G.t + C.bonk.safeTime;
+    if (h.climb) { h.climb = null; h.regrabT = 0.3; }
+    h.vx = (h.x < fromX ? -1 : 1) * C.bonk.knockback; h.vy = Math.min(h.vy, -6);
+    h.onGround = false;
+    G.bandit.pose = "giggle"; G.bandit.poseT = G.t + 1;
+    if (G.hearts <= 0) loseLife(); else scr.message("Bonk!", 700);
+  }
+  function fellOff() {
+    if (G.mode === "practice") { scr.message("Whoops! Back to the start", 1000); respawn(); snapCamera(); return; }
+    G.hearts--;
+    A.sfx.wrong(); A.buzz();
+    if (G.hearts <= 0) { loseLife(); return; }
+    respawn();
+    G.hero.safeT = G.t + C.bonk.safeTime;
+    snapCamera();
+    scr.message("Whoops!", 800);
+  }
+  function loseLife() {
+    G.livesLost++;
+    G.state = "lost"; G.stateT = 0;
+    A.sfx.lose();
+    G.bandit.pose = "dance"; G.bandit.poseT = G.t + 1.5; // he does a silly dance
+    scr.message(G.cfg.flags ? "Back to the flag!" : "Back to the start!", 1200);
+  }
+  function snapCamera() { G.camY = camTarget(); }
+
+  /* ---------- Bandit ---------- */
+  function updateBandit(dt) {
+    const B = G.bandit;
+    if (G.state === "caught") {
+      // Caught red-handed: sheepish, hands back the toy, then scampers up and away.
+      if (G.stateT > 1.5) { B.pose = "flee"; B.y -= dt * 9; B.x += B.dir * dt * 1.5; }
+      return;
+    }
+    if (G.state !== "play") return;
+    if (B.poseT && G.t > B.poseT) { B.pose = "idle"; B.poseT = 0; }
+    B.throwT -= dt;
+    if (B.throwT <= 0.45 && B.pose !== "throw" && G.hazards.length < G.cfg.maxHazards) { B.pose = "throw"; B.poseT = G.t + 0.5; }
+    if (B.throwT <= 0) {
+      if (G.hazards.length < G.cfg.maxHazards) spawnHazard(pickKind());
+      B.throwT = G.cfg.throwEvery * (G.entry.def.throwEvery || 1) * (0.75 + Math.random() * 0.5);
+    }
+    // Every so often he waves, sticks out his tongue, or giggles.
+    B.tauntT -= dt;
+    if (B.tauntT <= 0 && B.pose === "idle") {
+      B.pose = ["wave", "tongue", "giggle"][Math.floor(Math.random() * 3)];
+      B.poseT = G.t + 1.1;
+      B.tauntT = 3 + Math.random() * 3;
     }
   }
+  function pickKind() {
+    const w = G.entry.def.hazards || { ball: 1 }, total = Object.values(w).reduce((s, v) => s + v, 0);
+    let roll = Math.random() * total;
+    for (const [k, v] of Object.entries(w)) { roll -= v; if (roll < 0) return k; }
+    return "ball";
+  }
+  function reachBandit(h) {
+    const B = G.bandit;
+    if (Math.abs(h.x - B.x) < 0.75 && h.y > B.y - 1.2 && h.y - hh() < B.y) {
+      G.state = "caught"; G.stateT = 0;
+      B.pose = "caught";
+      G.hazards = [];
+      h.vx = 0; h.climb = null;
+      A.sfx.win();
+      scr.message("Caught you!", 1300);
+    }
+  }
+
+  /* ---------- Bandit's toys: bouncy balls and paint cans ---------- */
+  function spawnHazard(kind) {
+    const B = G.bandit;
+    G.hazards.push({
+      kind, x: B.x + B.dir * 0.4, y: B.y, r: kind === "can" ? C.hazards.canRadius : C.hazards.ballRadius, row: B.row, dir: B.dir,
+      state: "roll", vx: 0, vy: 0, t: Math.random() * 3, spin: 0, decided: new Set(), jumped: false, color: Math.floor(Math.random() * 3)
+    });
+  }
+  function removeHazard(z, poof) {
+    G.hazards = G.hazards.filter(o => o !== z);
+    if (poof) dustFx.emit(px(z.x), px(z.y - z.r), "#f2f0e6", 6);
+  }
+  function updateHazard(z, dt) {
+    const sp = G.cfg.hazardSpeed;
+    z.t += dt;
+    if (z.state === "roll") {
+      const c = Math.floor(z.x);
+      const d = downhill(c, z.row);
+      if (d) z.dir = d;
+      // Now and then a toy takes a ladder down instead of rolling past it.
+      const key = c + "," + z.row;
+      if (plat(c, z.row) && isClimb(tileAt(c, z.row + 1)) && !z.decided.has(key) && Math.abs(z.x - (c + 0.5)) < 0.2) {
+        z.decided.add(key);
+        if (Math.random() < G.cfg.ladderChance) {
+          let bottom = z.row + 1;
+          while (climbable(c, bottom + 1)) bottom++;
+          const s = surfaceTop(c, bottom + 1, c + 0.5);
+          if (s != null) { z.state = "ladder"; z.x = c + 0.5; z.bottomY = s; z.bottomRow = bottom + 1; return; }
+        }
+      }
+      let nx = z.x + z.dir * sp * dt;
+      // Bumping a wall: off the ground floor it disappears; on a girder it rolls back.
+      if (solid(Math.floor(nx + z.dir * z.r), Math.floor(z.y - 0.3))) {
+        if (solid(c, z.row)) { removeHazard(z, true); return; }
+        z.dir = -z.dir; nx = z.x;
+      }
+      z.x = nx;
+      z.spin += z.dir * sp * dt / z.r;
+      const s = surfaceTop(Math.floor(z.x), z.row, z.x);
+      if (s == null) { z.state = "fall"; z.vx = z.dir * sp * 0.6; z.vy = 0; } // off the end of the ramp
+      else z.y = s;
+    } else if (z.state === "fall") {
+      z.vy += C.hazards.gravity * dt;
+      const ny = z.y + z.vy * dt;
+      z.x += z.vx * dt;
+      if (solid(Math.floor(z.x + Math.sign(z.vx) * z.r), Math.floor(z.y - z.r))) { z.vx = -z.vx; z.x += z.vx * dt; }
+      const c = Math.floor(z.x);
+      let landed = null;
+      for (let r = Math.floor(z.y) - 1; r <= Math.floor(ny); r++) {
+        const s = surfaceTop(c, r, z.x);
+        if (s != null && s >= z.y - EPS && s <= ny && (landed == null || s < landed.s)) landed = { s, r };
+      }
+      if (landed) { z.y = landed.s; z.row = landed.r; z.state = "roll"; z.vy = 0; if (z.kind === "ball") z.t = 0; }
+      else z.y = ny;
+      if (z.y > G.L.rows.length + 2) { removeHazard(z, false); return; }
+    } else if (z.state === "ladder") {
+      z.y += sp * 0.8 * dt;
+      z.spin += dt * 4;
+      if (z.y >= z.bottomY) { z.y = z.bottomY; z.row = z.bottomRow; z.state = "roll"; }
+    }
+    // Into the toy box at the bottom.
+    if (tileAt(Math.floor(z.x), Math.floor(z.y - 0.2)) === "T") removeHazard(z, true);
+  }
+  // Bouncy balls hop as they roll.
+  const hop = z => (z.kind === "ball" && z.state === "roll" ? Math.abs(Math.sin(z.t * 7)) * C.hazards.bounce : 0);
+  function hitHazards(h) {
+    for (const z of G.hazards) {
+      const cy = z.y - z.r - hop(z), rr = z.r * C.hazards.hitScale;
+      const nx = Math.max(h.x - hw(), Math.min(h.x + hw(), z.x)), ny = Math.max(h.y - hh(), Math.min(h.y, cy));
+      if (Math.hypot(z.x - nx, cy - ny) < rr) { bonk(h, z.x); return; }
+      // Jumping over a toy scores points.
+      if (!z.jumped && !h.onGround && !h.climb && Math.abs(h.x - z.x) < 0.35 && h.y < cy - z.r && cy - h.y < 2.2) {
+        z.jumped = true; G.jumps++;
+        popup("+" + POINTS.jumpOver, h.x, h.y - hh() - 0.3);
+        A.sfx.right();
+      }
+    }
+  }
+
+  /* ---------- Finishing a level ---------- */
+  function finishLevel() {
+    G.state = "done";
+    scr.stop();
+    const def = G.entry.def, p = G.player, prog = progOf(p);
+    const timeBonus = Math.max(0, Math.round((def.targetTime - G.time) * POINTS.perSecond));
+    const score = G.coins * POINTS.coin + G.jumps * POINTS.jumpOver + POINTS.reach + (G.gotStar ? POINTS.star : 0) + timeBonus;
+    const fast = G.time <= def.targetTime;
+    const mask = 1 | (G.gotStar ? 2 : 0) | (fast ? 4 : 0);
+    const rec = prog.levels[def.id] || (prog.levels[def.id] = { stars: 0, time: null, score: {} });
+    const before = rec.stars;
+    rec.stars |= mask;
+    if (rec.time == null || G.time < rec.time) rec.time = Math.round(G.time * 10) / 10;
+    rec.score[G.diff] = Math.max(rec.score[G.diff] || 0, score);
+    const newToy = !prog.shelf.includes(def.item);
+    if (newToy) prog.shelf.push(def.item);
+    prog.unlocked = Math.max(prog.unlocked, G.entry.index + 2);
+    if (p && p.id) saveProgress();
+    const res = submitTotal(p, G.diff, prog);
+    if (res && res.newBest) scr.burst("New best!");
+    const item = ITEMS.find(i => i.id === def.item);
+    const next = campaignCache && campaignCache[G.entry.index + 1];
+    const star = (on, label) => `<li class="${on ? "on" : ""}"><span>${on ? "★" : "☆"}</span>${label}</li>`;
+    setTimeout(() => {
+      if (A.currentScreen !== "tt-play") return;
+      scr.showPanel({
+        html: `<h2>You caught Bandit!</h2>
+          <canvas class="tt-item-big" width="160" height="160" aria-hidden="true"></canvas>
+          <p class="note">He gave back your <b>${esc(item ? item.name.toLowerCase() : "toy")}</b>${newToy ? " (it's on your Toy Shelf now)" : ""}.</p>
+          <ul class="tt-stars">${star(true, "Caught Bandit")}${star(G.gotStar, "Found the hidden star")}${star(fast, `Under ${fmtTime(def.targetTime)}`)}</ul>
+          <p class="note">Time ${fmtTime(G.time)} · ${G.coins} coin${G.coins === 1 ? "" : "s"} · score <b>${score}</b>${starCount(rec.stars) > starCount(before) && before ? " · more stars!" : ""}</p>
+          ${next ? "" : `<p class="note">${HIDEOUTS[1].name} is coming soon!</p>`}`,
+        buttons: [
+          ...(next ? [{ label: "Next level", cls: "big", run: () => startLevel(next, G.diff) }] : []),
+          { label: "Play again", cls: next ? "" : "big", run: restartLevel },
+          { label: "Levels", cls: "ghost", run: showLevels }
+        ]
+      });
+      const cv = $("tt-play-panel").querySelector(".tt-item-big");
+      if (cv && item) { const c = cv.getContext("2d"); c.scale(2, 2); drawItem(c, item.id, 80, false); }
+    }, res && res.newBest ? 900 : 200);
+  }
+  // The high score is the total of a player's best score on every level; the household list keeps one entry per player.
+  function submitTotal(p, diff, prog) {
+    if (!p || !p.id) return null;
+    const total = Object.values(prog.levels).reduce((s, l) => s + ((l.score && l.score[diff]) || 0), 0);
+    const all = A.store.get("action:top", {}), key = `${ID}|${diff}`;
+    if (all[key]) { all[key] = all[key].filter(e => e.id !== p.id); A.store.set("action:top", all); }
+    return Act.scores.submit(ID, diff, p, total);
+  }
+
+  /* ---------- Level select, Toy Shelf, top scores ---------- */
+  let campaignCache = null;
+  async function showLevels() {
+    const p = A.session.player, prog = progOf(p), diff = diffOf(p);
+    campaignCache = await campaign();
+    $("tt-playing-as").innerHTML = `${A.avatarSvg(p)}<span>Playing: <b>${esc(p.name)}</b></span>
+      <button class="btn ghost" id="tt-switch">Switch</button>`;
+    $("tt-switch").addEventListener("click", () => A.whoIsPlaying({ force: true, onDone: showLevels, onBack: showLevels, backLabel: "Levels" }));
+    paintSeg("tt-diff", diff);
+    const total = Object.values(prog.levels).reduce((s, l) => s + ((l.score && l.score[diff]) || 0), 0);
+    $("tt-diff-note").textContent = DIFFS[diff].desc + (p.id ? ` · your score: ${total}` : "");
+    const box = $("tt-hideouts");
+    box.innerHTML = "";
+    for (const h of HIDEOUTS) {
+      const entries = campaignCache.filter(e => e.hideout === h);
+      const card = document.createElement("div");
+      card.className = "tt-hideout" + (entries.length ? "" : " soon");
+      card.innerHTML = `<h3>${esc(h.name)} <small>${esc(h.sub)}</small></h3><div class="tt-lvls"></div>${entries.length ? "" : `<p class="note">Coming soon</p>`}`;
+      const row = card.querySelector(".tt-lvls");
+      for (const e of entries) {
+        const rec = prog.levels[e.def.id], open = e.index < prog.unlocked;
+        const b = document.createElement("button");
+        b.className = "tt-lvl";
+        b.disabled = !open;
+        const stars = rec ? starCount(rec.stars) : 0;
+        b.innerHTML = `<b>${e.index + 1}</b><span>${open ? esc(e.def.name) : "Locked"}</span><small>${"★".repeat(stars)}${"☆".repeat(3 - stars)}${rec && rec.time != null ? ` · ${fmtTime(rec.time)}` : ""}</small>`;
+        b.setAttribute("aria-label", `Level ${e.index + 1}: ${open ? e.def.name : "locked"}. ${stars} of 3 stars.`);
+        b.addEventListener("click", () => startLevel(e, diffOf(p)));
+        row.appendChild(b);
+      }
+      box.appendChild(card);
+    }
+    A.setAccent(ACCENT);
+    A.show("tt-levels");
+  }
+  $("tt-diff").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { setDiff(A.session.player, b.dataset.v); showLevels(); }));
+
+  function showShelf() {
+    const prog = progOf(A.session.player);
+    $("tt-shelf-note").textContent = `${prog.shelf.length} of ${ITEMS.length} toys back on the shelf.`;
+    const grid = $("tt-shelf-grid");
+    grid.innerHTML = "";
+    for (const item of ITEMS) {
+      const have = prog.shelf.includes(item.id);
+      const cell = document.createElement("div");
+      cell.className = "tt-shelf-item" + (have ? "" : " missing");
+      cell.innerHTML = `<canvas width="128" height="128" aria-hidden="true"></canvas><span>${have ? esc(item.name) : "???"}</span>`;
+      const c = cell.querySelector("canvas").getContext("2d");
+      c.scale(2, 2);
+      drawItem(c, item.id, 64, !have);
+      grid.appendChild(cell);
+    }
+    A.setAccent(ACCENT);
+    A.show("tt-shelf");
+  }
+
+  function showTop(level) {
+    paintSeg("tt-top-level", level);
+    $("tt-top-list").innerHTML = `<p class="note">Each player's best score on every level, added up.</p>` + Act.topListHtml(Act.scores.top(ID, level), -1);
+    A.setAccent(ACCENT);
+    A.show("tt-top");
+  }
+  $("tt-top-level").querySelectorAll("button").forEach(b => b.addEventListener("click", () => showTop(b.dataset.v)));
 
   /* ---------- Camera and layout ---------- */
   const W = () => scr.size.w, H = () => scr.size.h;
   const px = t => t * F.s; // tiles -> pixels
   function layout() {
-    F.s = Math.min(W() / G.level.cols, H() / 12);
-    F.ox = (W() - F.s * G.level.cols) / 2;
+    F.s = Math.min(W() / G.L.cols, H() / 12);
+    F.ox = (W() - F.s * G.L.cols) / 2;
     F.viewRows = H() / F.s;
   }
   function camTarget() {
     if (!F.s) layout();
-    const rows = G.level.rows.length, h = G.hero;
+    const rows = G.L.rows.length, h = G.hero;
     const y = h.y - F.viewRows * 0.6;
     return Math.max(Math.min(0, rows - F.viewRows), Math.min(rows - F.viewRows, y));
   }
 
   let hudText = "";
   function updateHud() {
-    const html = `<span>${esc(G.level.name)}</span><span class="stars">★ ${G.got.size}/${G.starsTotal}</span>`;
+    let html;
+    if (G.mode === "practice") {
+      const stars = G.L.rows.join("").split("*").length - 1;
+      html = `<span>Practice</span><span class="stars">★ ${[...G.taken].length}/${stars}</span>`;
+    } else {
+      const hearts = "♥".repeat(Math.max(0, G.hearts)) + `<span class="gone">${"♥".repeat(Math.max(0, G.cfg.hearts - G.hearts))}</span>`;
+      html = `<span class="lives">${hearts}</span><span class="coins">● ${G.coins}</span><span class="time">${fmtTime(G.time)}</span>${G.gotStar ? `<span class="stars">★</span>` : ""}`;
+    }
     if (html !== hudText) { scr.hud.innerHTML = html; hudText = html; }
   }
 
   /* ---------- Drawing ---------- */
   function render() {
     if (!G || !F.s) return;
-    const ctx = scr.ctx, s = F.s, L = G.level;
+    const ctx = scr.ctx, s = F.s, L = G.L;
     ctx.clearRect(0, 0, W(), H());
     ctx.save();
     ctx.translate(F.ox, -G.camY * s);
@@ -454,8 +941,25 @@
     ctx.strokeStyle = "rgba(242,240,230,.05)"; ctx.lineWidth = 2;
     for (let c = 0; c <= L.cols; c += 3) { ctx.beginPath(); ctx.moveTo(c * s, r0 * s); ctx.lineTo(c * s, (r1 + 1) * s); ctx.stroke(); }
     for (let r = r0; r <= r1; r++) for (let c = 0; c < L.cols; c++) drawTile(ctx, L.rows[r][c], c, r, s);
+    if (G.mode === "level") {
+      drawBandit(ctx, G.bandit, s);
+      for (const z of G.hazards) drawHazard(ctx, z, s);
+    }
     dustFx.draw(ctx);
     drawHero(ctx, G.hero, s);
+    // Floating points.
+    ctx.textAlign = "center"; ctx.font = `${Math.round(s * 0.5)}px "Gochi Hand", cursive`;
+    for (const p of G.popups) { ctx.globalAlpha = 1 - p.t / 0.9; ctx.fillStyle = "#f3d36b"; ctx.fillText(p.text, p.x * s, (p.y - p.t * 0.8) * s); }
+    ctx.globalAlpha = 1;
+    // The toy flies from Bandit to the hero when he's caught.
+    if (G.state === "caught" && G.stateT > 0.6 && G.mode === "level") {
+      const f = Math.min(1, (G.stateT - 0.6) / 0.8), B = G.bandit, h = G.hero;
+      const x = B.x + (h.x - B.x) * f, y = (B.y - 1) + (h.y - 1.6 - (B.y - 1)) * f - Math.sin(f * Math.PI) * 1.2;
+      ctx.save(); ctx.translate(x * s - s * 0.45, y * s - s * 0.45);
+      const item = ITEMS.find(i => i.id === G.entry.def.item);
+      if (item) drawItem(ctx, item.id, s * 0.9, false);
+      ctx.restore();
+    }
     ctx.restore();
   }
 
@@ -471,24 +975,45 @@
     // Ladders, vines and ropes run up through the girder above them.
     const below = tileAt(c, r + 1);
     if (isClimb(t)) drawClimb(ctx, t, x, y, s, s);
-    if (t === "=") {
+    if (t === "=" || t === ">" || t === "<") {
       if (isClimb(below)) drawClimb(ctx, below, x, y, s, s);
-      const gh = s * 0.32;
-      ctx.fillStyle = "#f29a9a"; ctx.fillRect(x, y, s, gh);
+      const o = G.L.offs[r][c], gh = s * 0.32, y0 = y + o[0] * s, y1 = y + o[1] * s;
+      ctx.fillStyle = "#f29a9a";
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + s, y1); ctx.lineTo(x + s, y1 + gh); ctx.lineTo(x, y0 + gh); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5; ctx.beginPath();
-      ctx.moveTo(x, y + gh); ctx.lineTo(x + s / 2, y); ctx.lineTo(x + s, y + gh); ctx.stroke();
-      ctx.strokeStyle = "rgba(38,61,48,.5)"; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, gh - 1);
+      ctx.moveTo(x, y0 + gh); ctx.lineTo(x + s / 2, (y0 + y1) / 2); ctx.lineTo(x + s, y1 + gh); ctx.stroke();
+      ctx.strokeStyle = "rgba(38,61,48,.5)"; ctx.beginPath();
+      ctx.moveTo(x, y0); ctx.lineTo(x + s, y1); ctx.lineTo(x + s, y1 + gh); ctx.lineTo(x, y0 + gh); ctx.closePath(); ctx.stroke();
     }
-    if (t === "*" && !G.got.has(c + "," + r)) {
+    const key = c + "," + r;
+    if (t === "*" && !G.taken.has(key)) {
       const cx = x + s / 2, cy = y + s / 2 + Math.sin(G.t * 3 + c) * s * 0.06, rr = s * 0.32;
       ctx.fillStyle = "#f3d36b"; ctx.strokeStyle = "#8a5a34"; ctx.lineWidth = 1.5; ctx.beginPath();
       for (let k = 0; k <= 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? rr * 0.45 : rr; ctx[k ? "lineTo" : "moveTo"](cx + Math.cos(a) * q, cy + Math.sin(a) * q); }
       ctx.fill(); ctx.stroke();
     }
-    if (t === "S") {
-      ctx.strokeStyle = "rgba(242,240,230,.5)"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + s * 0.2, y + s); ctx.lineTo(x + s * 0.2, y + s * 0.2); ctx.stroke();
-      ctx.fillStyle = "rgba(255,196,107,.6)"; ctx.beginPath(); ctx.moveTo(x + s * 0.2, y + s * 0.2); ctx.lineTo(x + s * 0.6, y + s * 0.32); ctx.lineTo(x + s * 0.2, y + s * 0.45); ctx.fill();
+    if (t === "c" && !G.taken.has(key)) {
+      const cx = x + s / 2, cy = y + s / 2, rr = s * 0.2, w = Math.abs(Math.cos(G.t * 3 + c + r));
+      ctx.fillStyle = "#f3d36b"; ctx.strokeStyle = "#8a5a34"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(2, rr * w), rr, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    if (t === "S" || (t === "F" && G.mode === "level" && G.cfg.flags)) {
+      // A flag: the start, or a checkpoint (colored once it's your checkpoint).
+      const on = t === "S" || (G.checkpoint.c === c && G.checkpoint.r === r);
+      const base = spotAbove(c, r).y * s;
+      ctx.strokeStyle = "rgba(242,240,230,.6)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x + s * 0.25, base); ctx.lineTo(x + s * 0.25, base - s * 0.85); ctx.stroke();
+      ctx.fillStyle = t === "S" ? "rgba(255,196,107,.6)" : on ? "#b8e986" : "rgba(242,240,230,.35)";
+      const wave = Math.sin(G.t * 4 + c) * s * 0.04;
+      ctx.beginPath(); ctx.moveTo(x + s * 0.25, base - s * 0.85); ctx.lineTo(x + s * 0.7, base - s * 0.72 + wave); ctx.lineTo(x + s * 0.25, base - s * 0.55); ctx.fill();
+    }
+    if (t === "T") {
+      // The toy box at the bottom, where Bandit's toys end up.
+      const base = spotAbove(c, r).y * s;
+      ctx.fillStyle = "#a0714a"; ctx.strokeStyle = "#5c3b22"; ctx.lineWidth = 1.5;
+      ctx.fillRect(x + s * 0.05, base - s * 0.6, s * 0.9, s * 0.6); ctx.strokeRect(x + s * 0.05, base - s * 0.6, s * 0.9, s * 0.6);
+      ctx.fillStyle = "#f29a9a"; ctx.beginPath(); ctx.arc(x + s * 0.35, base - s * 0.62, s * 0.14, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#9fd3e8"; ctx.beginPath(); ctx.arc(x + s * 0.65, base - s * 0.62, s * 0.12, Math.PI, 0); ctx.fill();
     }
   }
   function drawClimb(ctx, kind, x, y, w, h) {
@@ -514,6 +1039,84 @@
     }
   }
 
+  const HAZARD_COLORS = ["#f29a9a", "#9fd3e8", "#f3d36b"];
+  function drawHazard(ctx, z, s) {
+    const r = z.r * s, x = z.x * s, y = (z.y - z.r - hop(z)) * s;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(z.spin);
+    ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5;
+    if (z.kind === "ball") {
+      ctx.fillStyle = HAZARD_COLORS[z.color]; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#f2f0e6"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, r * 0.62, -0.6, 0.9); ctx.stroke();
+    } else {
+      // A paint can rolling on its side: the lid, with paint splashed on it.
+      ctx.fillStyle = "#c8cfc4"; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = HAZARD_COLORS[z.color]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r * 0.78, -0.4, 1.4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(38,61,48,.6)"; ctx.beginPath(); ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Bandit: a mischievous raccoon (never mean). Poses: idle, throw, wave, tongue, giggle, dance, caught, flee.
+  function drawBandit(ctx, B, s) {
+    const pose = B.pose, t = G.t;
+    ctx.save();
+    ctx.translate(B.x * s, B.y * s);
+    if (pose === "dance") ctx.rotate(Math.sin(t * 12) * 0.25);
+    if (pose === "giggle") ctx.translate(Math.sin(t * 40) * s * 0.03, 0);
+    ctx.scale(B.dir < 0 ? -1 : 1, 1);
+    const u = s * 1.05;
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = Math.max(1.5, u * 0.05); ctx.strokeStyle = "#263d30";
+    // Striped tail.
+    const wag = Math.sin(t * (pose === "dance" ? 10 : 3)) * 0.25;
+    ctx.save(); ctx.translate(-u * 0.25, -u * 0.3); ctx.rotate(-0.9 + wag);
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? "#4b5354" : "#a8b0b2"; ctx.beginPath(); ctx.ellipse(-u * (0.12 + k * 0.12), 0, u * 0.1, u * 0.1 + k * u * 0.005, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    // Legs and body.
+    const step = pose === "dance" || pose === "flee" ? Math.sin(t * 16) * u * 0.08 : 0;
+    ctx.fillStyle = "#4b5354";
+    ctx.fillRect(-u * 0.18, -u * 0.18 + step, u * 0.12, u * 0.18); ctx.fillRect(u * 0.06, -u * 0.18 - step, u * 0.12, u * 0.18);
+    ctx.fillStyle = "#9aa3a6"; ctx.beginPath(); ctx.ellipse(0, -u * 0.42, u * 0.28, u * 0.3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#d4d9da"; ctx.beginPath(); ctx.ellipse(u * 0.05, -u * 0.38, u * 0.15, u * 0.19, 0, 0, Math.PI * 2); ctx.fill();
+    // Arms.
+    ctx.strokeStyle = "#4b5354"; ctx.lineWidth = u * 0.09;
+    const arm = (ax, ay, ex, ey) => { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke(); };
+    if (pose === "throw") { const f = Math.max(0, (B.poseT - t) / 0.5); arm(u * 0.15, -u * 0.55, u * (0.15 + 0.3 * (1 - f)), -u * (0.95 - 0.5 * (1 - f))); }
+    else if (pose === "wave") arm(u * 0.15, -u * 0.55, u * 0.35 + Math.sin(t * 14) * u * 0.08, -u * 0.95);
+    else if (pose === "dance") { arm(u * 0.15, -u * 0.55, u * 0.4, -u * (0.8 + Math.sin(t * 12) * 0.15)); arm(-u * 0.15, -u * 0.55, -u * 0.4, -u * (0.8 - Math.sin(t * 12) * 0.15)); }
+    else if (pose === "caught") { arm(u * 0.12, -u * 0.5, u * 0.3, -u * 0.62); }
+    else if (pose === "flee") { arm(u * 0.15, -u * 0.55, u * 0.3, -u * 1.0); arm(-u * 0.15, -u * 0.55, -u * 0.3, -u * 1.0); }
+    else arm(u * 0.15, -u * 0.5, u * 0.25, -u * 0.25);
+    // Head: ears, face, the black mask, eyes, nose.
+    ctx.lineWidth = Math.max(1.5, u * 0.05); ctx.strokeStyle = "#263d30";
+    const hx = u * 0.05, hy = -u * 0.86, hr = u * 0.27;
+    const ear = pose === "caught" ? 0.5 : 0;
+    ctx.fillStyle = "#9aa3a6";
+    for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.moveTo(hx + sgn * hr * 0.4, hy - hr * 0.6); ctx.lineTo(hx + sgn * hr * (0.95 + ear), hy - hr * (1.25 - ear)); ctx.lineTo(hx + sgn * hr * 0.95, hy - hr * 0.3); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#f2f0e6"; ctx.beginPath(); ctx.ellipse(hx + hr * 0.25, hy + hr * 0.35, hr * 0.55, hr * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2c3233"; ctx.beginPath(); ctx.ellipse(hx + hr * 0.1, hy - hr * 0.05, hr * 0.85, hr * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f2f0e6";
+    for (const ex of [-0.25, 0.4]) { ctx.beginPath(); ctx.arc(hx + hr * ex, hy - hr * 0.05, hr * 0.15, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = "#263d30";
+    const look = pose === "caught" ? 0.06 : 0;
+    for (const ex of [-0.25, 0.4]) { ctx.beginPath(); ctx.arc(hx + hr * (ex + 0.04), hy - hr * (0.02 - look * 3), hr * 0.07, 0, Math.PI * 2); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(hx + hr * 0.75, hy + hr * 0.3, hr * 0.12, 0, Math.PI * 2); ctx.fill();
+    // Mouth: a grin, a giggle, a tongue, or a sheepish wobble.
+    ctx.lineWidth = Math.max(1.2, u * 0.035);
+    if (pose === "tongue") { ctx.fillStyle = "#f29a9a"; ctx.beginPath(); ctx.ellipse(hx + hr * 0.5, hy + hr * 0.65, hr * 0.14, hr * 0.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    else if (pose === "caught") { ctx.beginPath(); ctx.moveTo(hx + hr * 0.15, hy + hr * 0.62); ctx.quadraticCurveTo(hx + hr * 0.35, hy + hr * 0.5, hx + hr * 0.55, hy + hr * 0.62); ctx.stroke();
+      // a little sweat drop
+      ctx.fillStyle = "#9fd3e8"; ctx.beginPath(); ctx.ellipse(hx - hr * 0.75, hy - hr * 0.5, hr * 0.1, hr * 0.16, 0, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.arc(hx + hr * 0.4, hy + hr * 0.45, hr * (pose === "giggle" || pose === "dance" ? 0.25 : 0.18), 0.2, Math.PI - 0.2); ctx.stroke(); }
+    ctx.restore();
+    if (pose === "giggle" || pose === "dance") {
+      ctx.fillStyle = "rgba(242,240,230,.7)"; ctx.font = `${Math.round(s * 0.38)}px "Gochi Hand", cursive`; ctx.textAlign = "center";
+      ctx.fillText(pose === "dance" ? "♪ hee hee ♪" : "hee hee!", B.x * s, (B.y - 1.55) * s);
+    }
+  }
+
   // The player's avatar, drawn on the hero's shirt.
   let avatarImg = null, avatarFor = null;
   function makeAvatarImage(p) {
@@ -529,6 +1132,7 @@
   }
 
   function drawHero(ctx, h, s) {
+    if (G.t < h.safeT && G.t >= h.dizzyT && Math.floor(G.t * 10) % 2) return; // blink while safe after a bonk
     const p = G.player, av = p && A.AVATARS[p.avatar];
     const shirt = av ? av.color : ACCENT;
     const fx = h.x * s, fy = h.y * s;
@@ -578,6 +1182,81 @@
     ctx.beginPath(); ctx.moveTo(-hr * 0.8, headY - hr * 0.3); ctx.lineTo(-hr * 1.55, headY - hr * 0.05); ctx.stroke(); // the brim, pointing back
     if (!h.climb) { ctx.fillStyle = "#263d30"; ctx.beginPath(); ctx.arc(hr * 0.45, headY + hr * 0.05, hr * 0.14, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
+    // Dizzy after a bonk: little stars circling the head (never hurt, just dizzy).
+    if (G.t < h.dizzyT) {
+      ctx.fillStyle = "#f3d36b";
+      for (let k = 0; k < 3; k++) {
+        const a = G.t * 8 + k * 2.1;
+        ctx.beginPath(); ctx.arc(fx + Math.cos(a) * bw * 0.6, fy - bh * 1.15 + Math.sin(a) * bw * 0.2, Math.max(2, s * 0.06), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  /* The stolen toys, as little chalk drawings in a size x size box (silhouette = still missing). */
+  function drawItem(c, id, size, silhouette) {
+    c.save();
+    const u = size / 10;
+    c.lineCap = "round"; c.lineJoin = "round"; c.lineWidth = Math.max(1.5, u * 0.35); c.strokeStyle = "#263d30";
+    const rect = (x, y, w, h, fill) => { c.fillStyle = fill; c.beginPath(); if (c.roundRect) c.roundRect(x * u, y * u, w * u, h * u, u * 0.5); else c.rect(x * u, y * u, w * u, h * u); c.fill(); c.stroke(); };
+    const circle = (x, y, r, fill) => { c.fillStyle = fill; c.beginPath(); c.arc(x * u, y * u, r * u, 0, Math.PI * 2); c.fill(); c.stroke(); };
+    switch (id) {
+      case "comic":
+        rect(2, 1.5, 6, 7, "#f3d36b");
+        c.fillStyle = "#f29a9a"; c.beginPath();
+        for (let k = 0; k <= 12; k++) { const a = k * Math.PI / 6, r = k % 2 ? 1.1 : 2; c.lineTo((5 + Math.cos(a) * r) * u, (4.5 + Math.sin(a) * r) * u); }
+        c.fill(); c.fillStyle = "#263d30"; c.font = `${Math.round(u * 1.4)}px "Gochi Hand", cursive`; c.textAlign = "center"; c.fillText("POW", 5 * u, 5 * u);
+        break;
+      case "videogame":
+        rect(1.5, 3, 7, 4, "#d7b4f3");
+        c.beginPath(); c.moveTo(3 * u, 4.2 * u); c.lineTo(3 * u, 5.8 * u); c.moveTo(2.2 * u, 5 * u); c.lineTo(3.8 * u, 5 * u); c.stroke();
+        circle(6.3, 4.4, 0.5, "#f29a9a"); circle(7.2, 5.4, 0.5, "#9fd3e8");
+        break;
+      case "crayons":
+        [["#f29a9a", 2.5], ["#9fd3e8", 4.5], ["#b8e986", 6.5]].forEach(([col, x]) => {
+          c.fillStyle = col; c.beginPath(); c.moveTo(x * u, 8.5 * u); c.lineTo(x * u, 3 * u); c.lineTo((x + 0.75) * u, 1.5 * u); c.lineTo((x + 1.5) * u, 3 * u); c.lineTo((x + 1.5) * u, 8.5 * u); c.closePath(); c.fill(); c.stroke();
+        });
+        break;
+      case "movie":
+        rect(2, 4, 6, 4.5, "#c8cfc4");
+        c.save(); c.translate(2 * u, 4 * u); c.rotate(-0.35); rect(0, -1.6, 6, 1.6, "#263d30"); c.restore();
+        circle(5, 6.2, 1, "#f3d36b");
+        break;
+      case "cards":
+        c.save(); c.translate(5 * u, 5 * u); c.rotate(-0.25); rect(-3, -3.5, 4.5, 6.5, "#9fd3e8"); c.restore();
+        c.save(); c.translate(5 * u, 5 * u); c.rotate(0.2); rect(-1.5, -3.2, 4.5, 6.5, "#f3d36b"); c.restore();
+        break;
+      case "robot":
+        rect(3, 1.5, 4, 3, "#c8cfc4"); rect(2.5, 4.8, 5, 3.5, "#9fd3e8");
+        circle(4.2, 3, 0.45, "#263d30"); circle(5.8, 3, 0.45, "#263d30");
+        c.beginPath(); c.moveTo(5 * u, 1.5 * u); c.lineTo(5 * u, 0.6 * u); c.moveTo(3.5 * u, 8.3 * u); c.lineTo(3.5 * u, 9.3 * u); c.moveTo(6.5 * u, 8.3 * u); c.lineTo(6.5 * u, 9.3 * u); c.stroke();
+        break;
+      case "bear":
+        circle(3, 2.6, 1.2, "#c9a26b"); circle(7, 2.6, 1.2, "#c9a26b"); circle(5, 5.2, 3.2, "#c9a26b");
+        circle(5, 6.3, 1.2, "#e8d4b0"); circle(3.9, 4.5, 0.35, "#263d30"); circle(6.1, 4.5, 0.35, "#263d30");
+        break;
+      case "kite":
+        c.fillStyle = "#f29a9a"; c.beginPath(); c.moveTo(5 * u, 0.8 * u); c.lineTo(8 * u, 4 * u); c.lineTo(5 * u, 8 * u); c.lineTo(2 * u, 4 * u); c.closePath(); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(5 * u, 0.8 * u); c.lineTo(5 * u, 8 * u); c.moveTo(2 * u, 4 * u); c.lineTo(8 * u, 4 * u); c.stroke();
+        c.beginPath(); c.moveTo(5 * u, 8 * u); c.quadraticCurveTo(4 * u, 9 * u, 6 * u, 9.6 * u); c.stroke();
+        break;
+      case "soccer":
+        circle(5, 5, 3.6, "#f2f0e6");
+        c.fillStyle = "#263d30"; c.beginPath();
+        for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * Math.PI * 2 / 5; c.lineTo((5 + Math.cos(a) * 1.2) * u, (5 + Math.sin(a) * 1.2) * u); }
+        c.fill();
+        break;
+      case "skateboard":
+        rect(1, 4.2, 8, 1.4, "#f5a142"); circle(2.8, 6.6, 0.8, "#f2f0e6"); circle(7.2, 6.6, 0.8, "#f2f0e6");
+        break;
+      case "puzzle":
+        rect(2.2, 3.2, 5.6, 5.6, "#b8e986"); circle(5, 3.2, 1.1, "#b8e986"); circle(7.8, 6, 1.1, "#b8e986");
+        break;
+      default: // race-car set
+        rect(1.5, 4.5, 7, 2.2, "#f29a9a"); rect(3.5, 3, 3, 1.8, "#9fd3e8");
+        circle(3, 7, 1, "#263d30"); circle(7, 7, 1, "#263d30");
+    }
+    if (silhouette) { c.globalCompositeOperation = "source-in"; c.fillStyle = "rgba(20,32,25,.75)"; c.fillRect(0, 0, size, size); }
+    c.restore();
   }
 
   /* ---------- ?tune: a slider for every number in TT.CONFIG ---------- */
@@ -631,8 +1310,17 @@
     <circle cx="37" cy="35" r="3"/><path d="M37 38 v3 M34 43 l3 -2 l3 2"/>`,
     open: showMenu,
     _state: () => G, // read-only peek at the game, for testing
-    tileStat: () => "Test level",
-    resetStats() { /* no stats yet */ },
-    forgetPlayer() { /* no stats yet */ }
+    tileStat(playerId) {
+      const prog = progress[playerId];
+      if (!prog) return null;
+      const stars = Object.values(prog.levels).reduce((s, l) => s + starCount(l.stars), 0), best = Act.scores.bestAny(ID, playerId);
+      return [stars ? `★ ${stars}` : "", best ? `Best ${best}` : "", `${prog.shelf.length} ${prog.shelf.length === 1 ? "toy" : "toys"} back`].filter(Boolean).join(" · ");
+    },
+    resetStats() { Act.scores.reset(ID); progress = {}; saveProgress(); },
+    forgetPlayer(id) {
+      Act.scores.forgetPlayer(ID, id);
+      delete progress[id]; delete prefs[id];
+      saveProgress(); A.store.set("toy-tower:prefs", prefs);
+    }
   });
 })();

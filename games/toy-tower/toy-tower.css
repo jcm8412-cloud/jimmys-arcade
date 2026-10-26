@@ -63,3 +63,50 @@
 .tt .tt-tune-row span { color: var(--chalk-dim); overflow-wrap: anywhere; }
 .tt .tt-tune-row input[type=range] { width: 100%; accent-color: var(--accent); }
 .tt .tt-tune-row output { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Level select ---------- */
+.tt .playing-as { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+.tt .playing-as .avatar { width: 40px; height: 40px; }
+.tt .playing-as b { font-weight: 400; color: var(--accent); }
+.tt .playing-as > span { flex: 1; overflow-wrap: anywhere; }
+.tt .playing-as .btn { min-height: 44px; padding: 4px 14px; font-size: 1rem; }
+.tt .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.tt .seg button {
+  min-height: 44px; padding: 4px 2px; cursor: pointer; font-size: 1rem;
+  background: rgba(0,0,0,.14); border: 2px dashed rgba(242,240,230,.35); border-radius: 10px;
+}
+.tt .seg button[aria-checked="true"] { border-style: solid; border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,.28); }
+#tt-hideouts { display: grid; gap: 12px; }
+.tt .tt-hideout { border: 2px solid rgba(242,240,230,.35); border-radius: 14px; padding: 10px 12px; background: rgba(0,0,0,.12); display: grid; gap: 8px; }
+.tt .tt-hideout h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; color: var(--accent); }
+.tt .tt-hideout h3 small { font-family: var(--font-body); font-size: 1rem; color: var(--chalk-dim); }
+.tt .tt-hideout.soon { opacity: .55; border-style: dashed; }
+.tt .tt-hideout.soon h3 { color: var(--chalk-dim); }
+.tt .tt-lvls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tt .tt-lvls:empty { display: none; }
+.tt .tt-lvl {
+  display: grid; justify-items: center; gap: 0; min-height: 76px; padding: 6px 4px; cursor: pointer;
+  background: rgba(0,0,0,.16); border: 2px solid rgba(242,240,230,.45); border-radius: 12px;
+}
+.tt .tt-lvl b { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1; color: var(--accent); }
+.tt .tt-lvl span { font-size: .95rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt .tt-lvl small { font-size: .85rem; color: var(--yellow); white-space: nowrap; }
+.tt .tt-lvl:disabled { cursor: default; opacity: .45; border-style: dashed; }
+
+/* ---------- Toy Shelf ---------- */
+.tt .tt-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tt .tt-shelf-item { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border-radius: 12px; background: rgba(0,0,0,.14); border-bottom: 4px solid #8a5a34; }
+.tt .tt-shelf-item canvas { width: 64px; height: 64px; }
+.tt .tt-shelf-item span { font-size: .95rem; text-align: center; }
+.tt .tt-shelf-item.missing span { color: var(--chalk-dim); }
+
+/* ---------- Play: HUD and the level-complete panel ---------- */
+.tt .act-hud { gap: 12px; }
+.tt .act-hud .coins { color: var(--yellow); }
+.tt .act-hud .time { font-variant-numeric: tabular-nums; color: var(--chalk-dim); }
+.tt .act-panel .tt-item-big { position: static; inset: auto; width: 80px; height: 80px; justify-self: center; } /* not pinned like the game canvas */
+.tt .tt-stars { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; text-align: left; justify-self: center; }
+.tt .tt-stars li { color: var(--chalk-dim); font-size: 1.05rem; }
+.tt .tt-stars li span { display: inline-block; width: 1.4em; font-size: 1.3rem; color: rgba(242,240,230,.35); }
+.tt .tt-stars li.on { color: var(--chalk); }
+.tt .tt-stars li.on span { color: var(--yellow); }
