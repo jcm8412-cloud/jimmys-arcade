@@ -120,3 +120,5 @@
 @keyframes tt-ready { 50% { transform: scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .tt .tt-use.ready { animation: none; } }
 .tt .act-hud .powers { font-size: .9rem; color: var(--yellow); overflow: hidden; text-overflow: ellipsis; }
+.tt .act-hud .keys { font-size: .95rem; color: var(--pink); white-space: nowrap; }
+.tt .act-hud .keys.all { color: #b8e986; }

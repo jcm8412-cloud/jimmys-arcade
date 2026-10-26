@@ -44,7 +44,24 @@ TT.CONFIG = {
     jumpUp: 15,          // jumping off with Up held
     jumpSide: 12,        // jumping off sideways (or with no direction)
     jumpOffX: 5.5,       // sideways speed when jumping off left or right
-    regrabDelay: 0.3     // after jumping off, wait this long before grabbing again
+    regrabDelay: 0.3,    // after jumping off, wait this long before grabbing again
+    vinePair: 1.45,      // holding two vines side by side climbs this much faster...
+    vineSingle: 0.75,    // ...a single vine climbs at this share of normal...
+    vineSlide: 1.3       // ...but slides down this much faster
+  },
+  spring: {
+    speed: 26,           // a springboard launches you this fast (about 5.5 tiles up)
+    boost: 1.08          // a little extra if you're holding Jump as you land on it
+  },
+  swing: {
+    grab: 0.8,           // grab a tire swing when your middle is this close to the tire
+    jumpSpeed: 14,       // jumping off a tire swing...
+    fling: 1             // ...also keeps this share of the swing's own speed
+  },
+  yoyo: {
+    range: 2.2,          // yo-yos bob up and down this many tiles...
+    period: 2.2,         // ...taking this many seconds for a full trip
+    radius: 0.28
   },
   wall: {
     slideSpeed: 3.5,     // falling speed while pressing into a wall

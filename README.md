@@ -23,7 +23,7 @@ A collection of chalkboard games for kids that plays like an app on phones and t
 - **Brick Bash:** Breakout with 30 levels, boss monsters every 5th level, power-ups, and a level editor for the family's own levels.
 - **Critter Crossing:** hop across roads, rivers and train tracks, in endless mode or 15 rescue missions, with four critters to pick from.
 - **Galaxy Defenders:** a space shooter with alien waves, bosses and an upgrade card after every wave, for 1 player or 2 as a team.
-- **Toy Tower** (in progress): a climbing platformer. Climb Bandit the raccoon's hideouts, dodge the toys he rolls down, and catch him to get your toys back. The Garage and The Toy Store are playable, with four power-ups.
+- **Toy Tower** (in progress): a climbing platformer. Climb Bandit the raccoon's hideouts, dodge the toys he rolls down, and catch him to get your toys back. The Garage, The Toy Store and The Backyard are playable, with four power-ups.
 - **Shared by every game:**
   - player profiles with chalk avatars
   - settings (sound, vibration, read-aloud, reset stats)
@@ -101,7 +101,7 @@ Game files are cached automatically from `games/index.js`. If you add a file to 
 | `games/brick-bash/` | Brick Bash (`levels.js` holds the 30 campaign levels) |
 | `games/critter-crossing/` | Critter Crossing (`missions.js` holds the 15 rescue missions) |
 | `games/galaxy-defenders/` | Galaxy Defenders |
-| `games/toy-tower/` | Toy Tower (`config.js` holds every movement number, `garage.json` and `store.json` the hideouts' levels, `test-level.json` the practice level) |
+| `games/toy-tower/` | Toy Tower (`config.js` holds every movement number, `garage.json`, `store.json` and `backyard.json` the hideouts' levels, `test-level.json` the practice level) |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and home-screen install |
 | `fonts/` | Gochi Hand and Patrick Hand (SIL Open Font License, see the `OFL-*.txt` files) |
 
@@ -428,7 +428,7 @@ Impossible's chain control:
 - **Daily twists:** aliens twice as fast but huge shots, surprise upgrades instead of cards, or a one-hit run with triple points. The twist plays at Medium.
 ## Toy Tower (in progress)
 
-Bandit the raccoon (a prankster, never mean) swiped the kids' toys and hauled them to the top of his hideouts. Climb up, dodge the toys he rolls down, and catch him: he looks sheepish, hands that level's toy back, and scampers up to the next hideout. Done so far: the hero's movement, power-ups, The Garage and The Toy Store. Still to come: The Backyard, The Box Fort, the Treehouse showdown, and the level editor.
+Bandit the raccoon (a prankster, never mean) swiped the kids' toys and hauled them to the top of his hideouts. Climb up, dodge the toys he rolls down, and catch him: he looks sheepish, hands that level's toy back, and scampers up to the next hideout. Done so far: the hero's movement, power-ups, The Garage, The Toy Store and The Backyard. Still to come: The Box Fort, the Treehouse showdown, and the level editor.
 
 - **The Garage (Ramp Run):** 3 levels (Workbench, Paint Shelves, Car Ramp) of sloped girders with ladders between them.
   - Bandit rolls bouncy balls and paint cans down the ramps. They drop off the low end onto the ramp below, sometimes take a ladder down, and end up in the toy box at the bottom.
@@ -439,6 +439,12 @@ Bandit the raccoon (a prankster, never mean) swiped the kids' toys and hauled th
   - Conveyor belts move both ways and carry you and the toys. You can walk against a belt, just slower.
   - Lifts ride up and down between floors, pausing at each end. Some floors are only reached by lift.
   - Bandit sends wind-up robots (slow, and they run down after a while; one walking against a belt can be carried backward) and toy cars (fast; they drive off the ends of floors).
+- **The Backyard (Vine Swing):** 3 levels (Treetop Trail, Tire Swing Hill, Big Oak) of vines, ropes, springboards and tire swings.
+  - Vines: holding two side by side climbs faster; a single vine climbs slower but slides down faster. (This applies to vines everywhere.)
+  - Stuffed-animal keys are scattered around (2 or 3 per level). Bandit's toy is locked in his chest at the top, which has a padlock for each missing key, so you need them all before you can catch him. Keys are kept if you lose a life.
+  - Springboards launch you about 5 tiles up, enough to skip a floor.
+  - Tire swings hang from branches over gaps too wide to jump. Jump into the tire to grab it, ride it, and jump off; you keep the swing's speed.
+  - Yo-yos bob up and down on their strings, and Bandit rolls bouncy balls.
 - **Power-ups** float in the levels. Grab one (you hold one at a time; it shows on the Use button), then tap **Use** (or press X):
   - Bubble wand: for 8 seconds, bubbles float out in front of you and pop any toy they touch.
   - Super sneakers: faster running and higher jumps for 10 seconds.
@@ -457,7 +463,7 @@ Bandit the raccoon (a prankster, never mean) swiped the kids' toys and hauled th
 - **Score:** coins, toys jumped over or popped, catching Bandit, the hidden star, and a bonus for each second under the target time. The high score (and the household top 5 for each level of difficulty) is the total of each player's best score on every level, so replaying a level to do better counts.
 - **Toy Shelf:** the 12 stolen toys (comic book, video game, crayons, movie, trading cards, toy robot, stuffed bear, kite, soccer ball, skateboard, puzzle, race-car set), with silhouettes for the ones still missing.
 - **Practice:** the original test level, with no Bandit, for trying out moves.
-- **Level files:** one JSON file per hideout (`games/toy-tower/garage.json`, `store.json`). Each level's rows are text, one character per tile: `.` empty, `=` flat girder, `>` and `<` girders sloping down to the right and left (a run of them is one ramp), `#` solid block, `H` ladder, `V` vine, `R` rope, `c` coin, `*` hidden star, `F` checkpoint, `T` toy box, `S` start, `B` Bandit, `}` and `{` conveyor belts moving right and left, and the power-ups `w` bubble wand, `n` super sneakers, `h` shield, `j` double jump. A level also sets its toy, target time, which toys Bandit throws, his pace, and its lifts (column, width, the two floor heights it stops at, speed, and pause).
+- **Level files:** one JSON file per hideout (`games/toy-tower/garage.json`, `store.json`, `backyard.json`). Each level's rows are text, one character per tile: `.` empty, `=` flat girder, `>` and `<` girders sloping down to the right and left (a run of them is one ramp), `#` solid block, `H` ladder, `V` vine, `R` rope, `c` coin, `*` hidden star, `F` checkpoint, `T` toy box, `S` start, `B` Bandit, `}` and `{` conveyor belts moving right and left, the power-ups `w` bubble wand, `n` super sneakers, `h` shield, `j` double jump, and `k` key, `X` toy chest, `Z` springboard, `Y` yo-yo. A level also sets its toy, target time, which toys Bandit throws, his pace, its lifts (column, width, the two floor heights it stops at, speed, and pause), and its tire swings (the branch's position, rope length, how far it swings, and how long a swing takes).
 
 - **Controls:** a strip under the tower, so thumbs never cover the action.
   - Left thumb: one big pad. Where the thumb sits sets the direction (8 ways), so it can roll between directions without lifting.

@@ -36,7 +36,7 @@
   const HIDEOUTS = [
     { id: "garage", name: "The Garage", sub: "Ramp Run", file: "games/toy-tower/garage.json" },
     { id: "store", name: "The Toy Store", sub: "Conveyor Chaos", file: "games/toy-tower/store.json" },
-    { id: "backyard", name: "The Backyard", sub: "Vine Swing" },
+    { id: "backyard", name: "The Backyard", sub: "Vine Swing", file: "games/toy-tower/backyard.json" },
     { id: "fort", name: "The Box Fort", sub: "Tape Trouble" }
   ];
   const POINTS = { coin: 10, jumpOver: 50, pop: 50, reach: 200, star: 500, perSecond: 10 };
@@ -166,11 +166,14 @@
         c = end + 1;
       }
     });
-    const L = { def, name: def.name, cols, rows, offs, start: null, bandit: null, flags: [], lifts: def.lifts || [] };
+    const L = { def, name: def.name, cols, rows, offs, start: null, bandit: null, flags: [], lifts: def.lifts || [], swings: def.swings || [], yoyos: [], keysTotal: 0, chest: null };
     rows.forEach((row, r) => [...row].forEach((ch, c) => {
       if (ch === "S") L.start = { c, r };
       if (ch === "B") L.bandit = { c, r };
       if (ch === "F") L.flags.push({ c, r });
+      if (ch === "Y") L.yoyos.push({ c, r });
+      if (ch === "k") L.keysTotal++;
+      if (ch === "X") L.chest = { c, r };
     }));
     return L;
   }
@@ -194,7 +197,8 @@
   const freshRun = L => ({
     L, hazards: [], popups: [], bubbles: [], t: 0, time: 0, coins: 0, jumps: 0, gotStar: false, taken: new Set(), livesLost: 0,
     state: "play", stateT: 0, camY: 0, held: null, wandT: 0, bubbleT: 0, sneakT: 0, shield: false, doubleJump: false, pops: 0,
-    lifts: L.lifts.map(l => ({ ...l, y: l.start ? l.top : l.bottom, dir: l.start ? 1 : -1, waitT: l.pause, dy: 0 }))
+    lifts: L.lifts.map(l => ({ ...l, y: l.start ? l.top : l.bottom, dir: l.start ? 1 : -1, waitT: l.pause, dy: 0 })),
+    swings: L.swings.map(s => ({ ...s, phase: s.phase || 0 })), keys: 0, chestOpen: 0, sprung: {}
   });
   async function startLevel(entry, diff) {
     G = Object.assign(freshRun(parseLevel(entry.def)), { mode: "level", entry, diff, cfg: DIFFS[diff], player: A.session.player, hearts: DIFFS[diff].hearts });
@@ -369,7 +373,7 @@
       if (G.state === "play") G.time += dt;
       for (const k of ["coyoteT", "bufferT", "wallT", "lockT", "regrabT", "dropT", "landT"]) if (h[k] > 0) h[k] -= dt;
       const inp = G.state === "play" && G.t >= h.dizzyT ? input() : NO_INPUT;
-      if (h.climb) updateClimb(h, inp, dt); else updateMove(h, inp, dt);
+      if (h.swing) updateRide(h, inp, dt); else if (h.climb) updateClimb(h, inp, dt); else updateMove(h, inp, dt);
       if (G.state === "play") {
         collect(h);
         if (G.mode === "level") { touchFlags(h); hitHazards(h); reachBandit(h); }
@@ -460,7 +464,54 @@
     }
     if (h.onGround) h.runPhase += Math.abs(h.vx) * dt * 2.2;
 
+    // A springboard under your feet launches you up.
+    if (h.onGround) {
+      // (On a ramp the girder's top sits a little inside its row, so the springboard may be one row up.)
+      const zc = Math.floor(h.x), zr = [Math.floor(h.y - 0.05), Math.floor(h.y - 0.05) - 1].find(r => tileAt(zc, r) === "Z");
+      if (zr != null && Math.abs(h.x - (zc + 0.5)) < 0.45 && Math.abs(spotAbove(zc, zr).y - h.y) < 0.15) {
+        h.vy = -C.spring.speed * (jumpHeld ? C.spring.boost : 1); h.onGround = false; h.lift = null; h.jumping = false; h.coyoteT = 0;
+        G.sprung[zc + "," + zr] = G.t;
+        A.sfx.right();
+        dustFx.emit(px(h.x), px(h.y), "#f2f0e6", 6);
+      }
+    }
+    grabSwing(h, inp);
     tryGrab(h, inp);
+  }
+
+  /* ---------- Tire swings ---------- */
+  // Where a tire is (and how fast it's moving) at time t: a pendulum swinging amp radians either side.
+  function swingPos(s, t) {
+    const w = 2 * Math.PI / s.period, th = s.amp * Math.sin(w * t + s.phase), dth = s.amp * w * Math.cos(w * t + s.phase);
+    return { x: s.x + s.len * Math.sin(th), y: s.y + s.len * Math.cos(th), vx: s.len * Math.cos(th) * dth, vy: -s.len * Math.sin(th) * dth };
+  }
+  // Jumping (or reaching up) into a tire grabs it.
+  function grabSwing(h, inp) {
+    if (h.regrabT > 0 || G.state !== "play" || (h.onGround && !inp.up)) return;
+    for (const s of G.swings) {
+      const p = swingPos(s, G.t);
+      if (Math.hypot(h.x - p.x, h.y - hh() * 0.5 - p.y) < C.swing.grab) {
+        h.swing = s; h.climb = null; h.onGround = false; h.lift = null; h.jumping = false; h.airJumps = 1;
+        A.sfx.right();
+        return;
+      }
+    }
+  }
+  // Riding: hold on while it swings; Jump lets go with the swing's speed (Down + Jump just drops).
+  function updateRide(h, inp, dt) {
+    const p = swingPos(h.swing, G.t);
+    h.x = p.x; h.y = p.y + 0.3; h.vx = p.vx; h.vy = p.vy;
+    if (Math.abs(p.vx) > 0.3) h.face = p.vx > 0 ? 1 : -1;
+    if (h.bufferT <= 0) return;
+    h.bufferT = 0;
+    h.swing = null;
+    h.regrabT = 0.45;
+    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    if (dir) h.face = dir;
+    if (inp.down && !dir) { h.vx = p.vx * C.swing.fling; h.vy = Math.max(0, p.vy); return; }
+    h.vx = p.vx * C.swing.fling + dir * 2.5;
+    h.vy = Math.min(p.vy, 0) - C.swing.jumpSpeed;
+    h.jumping = true;
   }
 
   // The highest surface under the hero's feet between yFrom and yTo (girders count unless dropping through).
@@ -612,13 +663,27 @@
     const bottomY = below == null ? bottom + 1 : below;
     if (inp.down && h.onGround) { if (hit.r !== top || !plat(hit.c, top)) return; h.y += 0.05; } // step down onto the ladder
     else if (inp.up && h.onGround && h.y <= topY + 0.05) return;                                  // already at the top
-    h.climb = { c: hit.c, top, topY, bottomY, kind: climbKind(hit.c, hit.r) };
+    const kind = climbKind(hit.c, hit.r);
+    // Two vines side by side: hold both (the hero sits between them).
+    let pair = 0;
+    if (kind === "V") for (const side of [1, -1]) {
+      for (let r = top; r <= bottom && !pair; r++) if (tileAt(hit.c + side, r) === "V") pair = side;
+      if (pair) break;
+    }
+    h.climb = { c: hit.c, top, topY, bottomY, kind, pair };
     h.y = Math.min(h.y, bottomY); // grabbed the end of a rope with feet hanging below it: hang from the end
     h.vx = 0; h.vy = 0; h.onGround = false; h.lift = null; h.jumping = false; h.slideV = C.climb.downSpeed; h.airJumps = 1;
   }
+  // Vines: two side by side climb faster; a single vine climbs slower but slides down faster.
+  function vineSpeeds(h) {
+    const cl = h.climb;
+    if (cl.kind !== "V") return { up: 1, slide: 1 };
+    const both = cl.pair && tileAt(cl.c + cl.pair, Math.floor(h.y - hh() * 0.5)) === "V";
+    return both ? { up: C.climb.vinePair, slide: 1 } : { up: C.climb.vineSingle, slide: C.climb.vineSlide };
+  }
   function updateClimb(h, inp, dt) {
     const cl = h.climb;
-    h.x = approach(h.x, cl.c + 0.5, C.climb.centerSpeed * dt);
+    h.x = approach(h.x, cl.pair > 0 ? cl.c + 1 : cl.pair < 0 ? cl.c : cl.c + 0.5, C.climb.centerSpeed * dt);
     // Jump off in any direction (Down + Jump just lets go).
     if (h.bufferT > 0) {
       h.bufferT = 0;
@@ -632,8 +697,9 @@
       h.jumping = true;
       return;
     }
-    if (inp.up) { h.vy = -C.climb.upSpeed; h.slideV = C.climb.downSpeed; }
-    else if (inp.down) { h.slideV = approach(h.slideV, C.climb.slideSpeed, C.climb.slideAccel * dt); h.vy = h.slideV; } // hold to slide fast
+    const vs = vineSpeeds(h);
+    if (inp.up) { h.vy = -C.climb.upSpeed * vs.up; h.slideV = C.climb.downSpeed; }
+    else if (inp.down) { h.slideV = approach(h.slideV, C.climb.slideSpeed * vs.slide, C.climb.slideAccel * vs.slide * dt); h.vy = h.slideV; } // hold to slide fast
     else { h.vy = 0; h.slideV = C.climb.downSpeed; }
     const ny = h.y + h.vy * dt;
     if (ny <= cl.topY) {
@@ -672,9 +738,15 @@
         scr.message(`${POWERS[t].name}! Tap Use`, 1200);
         return;
       }
-      if ((t !== "*" && t !== "c") || G.taken.has(key)) return;
+      if ((t !== "*" && t !== "c" && t !== "k") || G.taken.has(key)) return;
       G.taken.add(key);
-      if (t === "c") {
+      if (t === "k") {
+        // A stuffed-animal key for Bandit's toy chest (kept even after losing a life).
+        G.keys++;
+        A.sfx.win();
+        dustFx.emit(px(c + 0.5), px(r + 0.5), "#f29a9a", 10);
+        scr.message(G.keys >= G.L.keysTotal ? "All the keys! Up to the chest!" : `Key ${G.keys} of ${G.L.keysTotal}!`, 1200);
+      } else if (t === "c") {
         G.coins++;
         A.sfx.right();
         dustFx.emit(px(c + 0.5), px(r + 0.5), "#f3d36b", 6);
@@ -715,6 +787,7 @@
     A.sfx.wrong(); A.buzz();
     h.dizzyT = G.t + C.bonk.dizzyTime; h.safeT = G.t + C.bonk.safeTime;
     if (h.climb) { h.climb = null; h.regrabT = 0.3; }
+    if (h.swing) { h.swing = null; h.regrabT = 0.45; }
     h.vx = (h.x < fromX ? -1 : 1) * C.bonk.knockback; h.vy = Math.min(h.vy, -6);
     h.onGround = false;
     G.bandit.pose = "giggle"; G.bandit.poseT = G.t + 1;
@@ -772,6 +845,12 @@
   function reachBandit(h) {
     const B = G.bandit;
     if (Math.abs(h.x - B.x) < 0.75 && h.y > B.y - 1.2 && h.y - hh() < B.y) {
+      // In the Backyard the toy is locked in his chest: bring every key first.
+      if (G.L.keysTotal && G.keys < G.L.keysTotal) {
+        if (G.t > (G.keyMsgT || 0)) { scr.message(`Find all the keys! ${G.keys} of ${G.L.keysTotal}`, 1200); G.keyMsgT = G.t + 2; B.pose = "tongue"; B.poseT = G.t + 1; }
+        return;
+      }
+      if (G.L.keysTotal) G.chestOpen = G.t;
       G.state = "caught"; G.stateT = 0;
       B.pose = "caught";
       G.hazards = [];
@@ -894,7 +973,17 @@
     }
     G.bubbles = G.bubbles.filter(b => b.t < 1.6);
   }
+  // Yo-yos bob up and down on their strings from their tile (each a little out of step with the others).
+  function yoyoPos(y) {
+    const f = 0.5 - 0.5 * Math.cos(2 * Math.PI * G.t / C.yoyo.period + y.c * 1.3 + y.r);
+    return { x: y.c + 0.5, y: y.r + 0.4 + f * C.yoyo.range };
+  }
   function hitHazards(h) {
+    for (const yo of G.L.yoyos) {
+      const p = yoyoPos(yo), rr = C.yoyo.radius * C.hazards.hitScale;
+      const nx = Math.max(h.x - hw(), Math.min(h.x + hw(), p.x)), ny = Math.max(h.y - hh(), Math.min(h.y, p.y));
+      if (Math.hypot(p.x - nx, p.y - ny) < rr) { bonk(h, p.x); return; }
+    }
     for (const z of G.hazards) {
       const cy = z.y - z.r - hop(z), rr = z.r * C.hazards.hitScale;
       const nx = Math.max(h.x - hw(), Math.min(h.x + hw(), z.x)), ny = Math.max(h.y - hh(), Math.min(h.y, cy));
@@ -1055,6 +1144,7 @@
     if (G.shield) on.push("Shield");
     if (G.doubleJump) on.push("2× jump");
     if (on.length) html += `<span class="powers">${on.join(" · ")}</span>`;
+    if (G.L.keysTotal) html += `<span class="keys${G.keys >= G.L.keysTotal ? " all" : ""}">Keys ${G.keys}/${G.L.keysTotal}</span>`;
     if (html !== hudText) { scr.hud.innerHTML = html; hudText = html; }
   }
 
@@ -1071,6 +1161,9 @@
     for (let c = 0; c <= L.cols; c += 3) { ctx.beginPath(); ctx.moveTo(c * s, r0 * s); ctx.lineTo(c * s, (r1 + 1) * s); ctx.stroke(); }
     for (const l of G.lifts) drawLift(ctx, l, s);
     for (let r = r0; r <= r1; r++) for (let c = 0; c < L.cols; c++) drawTile(ctx, L.rows[r][c], c, r, s);
+    for (const sw of G.swings) drawSwing(ctx, sw, s);
+    for (const yo of L.yoyos) drawYoyo(ctx, yo, s);
+    if (L.chest) drawChest(ctx, L.chest, s);
     if (G.mode === "level") {
       drawBandit(ctx, G.bandit, s);
       for (const z of G.hazards) drawHazard(ctx, z, s);
@@ -1139,6 +1232,26 @@
       ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, gh - 1);
     }
     const key = c + "," + r;
+    if (t === "k" && !G.taken.has(key)) {
+      // A stuffed-animal key: a little teddy holding a key.
+      const cx = x + s / 2, cy = y + s / 2 + Math.sin(G.t * 3 + c) * s * 0.07, u = s / 10;
+      ctx.lineWidth = 1.5; ctx.strokeStyle = "#263d30"; ctx.fillStyle = "#f29a9a";
+      for (const ex of [-2.2, 2.2]) { ctx.beginPath(); ctx.arc(cx + ex * u, cy - 2.6 * u, 1.2 * u, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(cx, cy - 0.8 * u, 2.6 * u, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#263d30"; ctx.beginPath(); ctx.arc(cx - 0.9 * u, cy - 1.2 * u, 0.4 * u, 0, Math.PI * 2); ctx.arc(cx + 0.9 * u, cy - 1.2 * u, 0.4 * u, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#f3d36b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy + 2.6 * u, 0.9 * u, 0, Math.PI * 2); ctx.moveTo(cx + 0.9 * u, cy + 2.6 * u); ctx.lineTo(cx + 3.2 * u, cy + 2.6 * u); ctx.lineTo(cx + 3.2 * u, cy + 3.4 * u); ctx.stroke();
+    }
+    if (t === "Z") {
+      // A springboard (squashed for a moment after it launches you).
+      const since = G.t - (G.sprung[key] == null ? -9 : G.sprung[key]), squash = since < 0.25 ? 1 - since / 0.25 : 0;
+      const base = spotAbove(c, r).y * s, top = base - s * (0.45 - 0.25 * squash);
+      ctx.strokeStyle = "#c8cfc4"; ctx.lineWidth = 2.5; ctx.beginPath();
+      for (let k = 0; k <= 4; k++) { const py = base - (base - top) * k / 4; ctx[k ? "lineTo" : "moveTo"](x + s * (k % 2 ? 0.7 : 0.3), py); }
+      ctx.stroke();
+      ctx.fillStyle = "#f29a9a"; ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5;
+      ctx.fillRect(x + s * 0.1, top - s * 0.12, s * 0.8, s * 0.12); ctx.strokeRect(x + s * 0.1, top - s * 0.12, s * 0.8, s * 0.12);
+      ctx.fillStyle = "#8d998f"; ctx.fillRect(x + s * 0.15, base - s * 0.06, s * 0.7, s * 0.06);
+    }
     if (POWERS[t] && !G.taken.has(key)) {
       // A floating power-up.
       const cy = y + s / 2 + Math.sin(G.t * 3 + c) * s * 0.08;
@@ -1240,6 +1353,53 @@
       ctx.strokeStyle = "rgba(38,61,48,.6)"; ctx.beginPath(); ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
+  }
+
+  // A tire swing: a branch, its rope, and the tire.
+  function drawSwing(ctx, sw, s) {
+    const p = swingPos(sw, G.t);
+    ctx.strokeStyle = "#8a5a34"; ctx.lineWidth = Math.max(3, s * 0.14); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo((sw.x - 0.9) * s, (sw.y - 0.1) * s); ctx.lineTo((sw.x + 0.9) * s, (sw.y + 0.05) * s); ctx.stroke();
+    ctx.strokeStyle = "#c9a26b"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(sw.x * s, sw.y * s); ctx.lineTo(p.x * s, (p.y - 0.35) * s); ctx.stroke();
+    ctx.strokeStyle = "#2c3233"; ctx.lineWidth = Math.max(4, s * 0.16);
+    ctx.beginPath(); ctx.ellipse(p.x * s, p.y * s, s * 0.38, s * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(242,240,230,.25)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(p.x * s, p.y * s, s * 0.3, s * 0.22, 0, 0.5, 2.2); ctx.stroke();
+  }
+  // A yo-yo on its string.
+  function drawYoyo(ctx, yo, s) {
+    const p = yoyoPos(yo), r = C.yoyo.radius * s;
+    // The string hangs from the girder (or block) above.
+    let a = yo.r;
+    while (a > 0 && !plat(yo.c, a - 1) && !solid(yo.c, a - 1)) a--;
+    const top = a > 0 && plat(yo.c, a - 1) ? surfaceTop(yo.c, a - 1, yo.c + 0.5) + 0.3 : a;
+    ctx.strokeStyle = "rgba(242,240,230,.6)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(p.x * s, top * s); ctx.lineTo(p.x * s, p.y * s); ctx.stroke();
+    ctx.save(); ctx.translate(p.x * s, p.y * s); ctx.rotate(G.t * 9);
+    ctx.fillStyle = "#d7b4f3"; ctx.strokeStyle = "#263d30"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#f2f0e6"; ctx.beginPath(); ctx.moveTo(-r * 0.6, 0); ctx.lineTo(r * 0.6, 0); ctx.stroke();
+    ctx.restore();
+  }
+  // Bandit's toy chest: locked until every key is found, then the lid flips open.
+  function drawChest(ctx, ch, s) {
+    const x = ch.c * s, base = spotAbove(ch.c, ch.r).y * s, w = s * 0.9, h = s * 0.55, x0 = x + s * 0.05;
+    ctx.fillStyle = "#a0714a"; ctx.strokeStyle = "#5c3b22"; ctx.lineWidth = 1.5;
+    ctx.fillRect(x0, base - h, w, h); ctx.strokeRect(x0, base - h, w, h);
+    const open = G.chestOpen ? Math.min(1, (G.t - G.chestOpen) / 0.4) : 0;
+    ctx.save(); ctx.translate(x0, base - h); ctx.rotate(-open * 1.9);
+    ctx.fillStyle = "#c9a26b"; ctx.fillRect(0, -s * 0.2, w, s * 0.2); ctx.strokeRect(0, -s * 0.2, w, s * 0.2);
+    ctx.restore();
+    if (!open) {
+      // One little padlock per key still missing.
+      const left = Math.max(0, G.L.keysTotal - G.keys);
+      for (let k = 0; k < left; k++) {
+        const lx = x0 + w * (k + 1) / (left + 1);
+        ctx.fillStyle = "#f3d36b"; ctx.fillRect(lx - s * 0.07, base - h * 0.6, s * 0.14, s * 0.12);
+        ctx.strokeStyle = "#f3d36b"; ctx.beginPath(); ctx.arc(lx, base - h * 0.6, s * 0.05, Math.PI, 0); ctx.stroke();
+      }
+    }
   }
 
   // A lift: guide rails up its shaft, and the platform riding up and down.
